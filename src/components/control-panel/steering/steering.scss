@@ -1,0 +1,54 @@
+.steering {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+
+    &__direction {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-rows: repeat(3, 1fr);
+        column-gap: 20px;
+        row-gap: 20px;
+    }
+
+    &__pid {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        width: 120px;
+        background-color: blue;
+        padding: 8px;
+        border-radius: 4px;
+
+        &__inputWrapper {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        &__label {
+            font-weight: bold;
+            font-size: 18px;
+            color: white;
+        }
+        
+        &__input {
+            width: 80px;
+            padding: 4px;
+            border: 1px solid black;
+            border-radius: 4px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        &__button {
+            font-size: 16px;
+            font-weight: bold;
+            background-color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px;
+        }
+    }
+}

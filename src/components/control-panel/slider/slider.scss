@@ -1,0 +1,19 @@
+.slider {
+    appearance: none;
+    width: 10px;
+    height: 250px;
+    background: white;
+    cursor: pointer;
+    writing-mode: vertical-lr;
+    direction: rtl;
+
+    &::-webkit-slider-thumb {
+        appearance: none;
+        border-radius: 4px;
+        width: 25px;
+        height: 10px;
+        background: blue;
+        cursor: pointer;
+    }
+}
+

@@ -1,0 +1,49 @@
+<div class="steering">
+    <slider (valueChange)="setSpeed($event)"></slider>
+
+    <div class="steering__direction">
+        <longpress-button (press)="move('FORWARD_LEFT')">
+            <fa-icon [icon]="faAngleUp" rotate="-45deg" size="3x" />
+        </longpress-button>
+        <longpress-button (press)="move('FORWARD')">
+            <fa-icon [icon]="faAngleUp" size="3x" />
+        </longpress-button>
+        <longpress-button (press)="move('FORWARD_RIGHT')">
+            <fa-icon [icon]="faAngleUp" rotate="45deg" size="3x" />
+        </longpress-button>
+        <longpress-button (press)="move('LEFT')">
+            <fa-icon [icon]="faAngleUp" rotate="-90deg" size="3x" />
+        </longpress-button>
+        <button class="button" (click)="move('STOP')">
+            <fa-icon [icon]="faArrowsToCircle" size="2x" />
+        </button>
+        <longpress-button (press)="move('RIGHT')">
+            <fa-icon [icon]="faAngleUp" rotate="90deg" size="3x" />
+        </longpress-button>
+        <longpress-button (press)="move('BACKWARD_LEFT')">
+            <fa-icon [icon]="faAngleUp" rotate="225deg" size="3x" />
+        </longpress-button>
+        <longpress-button (press)="move('BACKWARD')">
+            <fa-icon [icon]="faAngleUp" rotate="180deg" size="3x" />
+        </longpress-button>
+        <longpress-button (press)="move('BACKWARD_RIGHT')">
+            <fa-icon [icon]="faAngleUp" rotate="135deg" size="3x" />
+        </longpress-button>
+    </div>
+
+    <form class="steering__pid">
+        <div class="steering__pid__inputWrapper">
+            <label class="steering__pid__label" for="P">P:</label>
+            <input class="steering__pid__input" type="number" name="P" step="0.01" [(ngModel)]="P" />
+        </div>
+        <div class="steering__pid__inputWrapper">
+            <label class="steering__pid__label" for="I">I:</label>
+            <input class="steering__pid__input" type="number" name="I" step="0.01" [(ngModel)]="I" />
+        </div>
+        <div class="steering__pid__inputWrapper">
+            <label class="steering__pid__label" for="D">D:</label>
+            <input class="steering__pid__input" type="number" name="D" step="0.001" [(ngModel)]="D" />
+        </div>
+        <button class="steering__pid__button" (click)="setPid()">Set PID</button>
+    </form>
+</div>

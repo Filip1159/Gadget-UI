@@ -1,13 +1,12 @@
 import { Component, signal } from '@angular/core';
-import { RobotComponent } from "./../components/robot/robot";
-import { Steering } from "./../components/steering/steering";
+import { ControlPanel } from "./../components/control-panel/control-panel";
+import { Header } from "./../components/header/header"
 
 @Component({
   selector: 'app-root',
-  imports: [RobotComponent, Steering],
+  imports: [Header, ControlPanel],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
 export class App {
-  protected readonly title = signal('exploring-robot');
 }

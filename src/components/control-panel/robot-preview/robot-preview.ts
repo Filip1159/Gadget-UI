@@ -1,13 +1,13 @@
 import { Component, ElementRef, inject, HostListener, OnInit, ViewChild } from "@angular/core";
 import { drawAll, drawDistance } from "./drawing";
-import { SocketService } from "../../socket.service";
+import { SocketService } from "../../../socket.service";
 
 @Component({
-    selector: "robot",
-    templateUrl: "./robot.html",
-    styleUrls: ["./robot.scss"]
+    selector: "robot-preview",
+    templateUrl: "./robot-preview.html",
+    styleUrls: ["./robot-preview.scss"]
 })
-export class RobotComponent implements OnInit {
+export class RobotPreview implements OnInit {
 
      private socket = inject(SocketService)
 

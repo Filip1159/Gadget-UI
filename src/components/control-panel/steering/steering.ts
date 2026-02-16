@@ -1,10 +1,12 @@
 import { Component, effect, ElementRef, HostListener, inject, OnInit, OnDestroy, signal, ViewChild } from '@angular/core'
-import { SocketService } from '../../socket.service'
+import { FormsModule } from '@angular/forms'
+import { SocketService } from '../../../socket.service'
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome'
 import { faAngleUp, faArrowsToCircle, faLightbulb } from '@fortawesome/free-solid-svg-icons'
-import { LongPressButton } from './longpress-button/longpress-button'
-import { Slider } from './slider/slider'
+import { LongPressButton } from './../longpress-button/longpress-button'
+import { Slider } from './../slider/slider'
 import { Subject, Subscription, throttleTime } from 'rxjs'
+import { RobotPreview } from "./../robot-preview/robot-preview";
 
 const KEY_TO_DIRECTION = {
     'w': 'FORWARD',
@@ -21,7 +23,7 @@ const KEY_TO_DIRECTION = {
 @Component({
     selector: 'steering',
     standalone: true,
-    imports: [FontAwesomeModule, LongPressButton, Slider],
+    imports: [FontAwesomeModule, FormsModule, LongPressButton, Slider, RobotPreview],
     templateUrl: './steering.html',
     styleUrl: './steering.scss',
 })
@@ -33,6 +35,10 @@ export class Steering implements OnInit, OnDestroy {
 
     private keydown = new Subject<Event>();
     private sub!: Subscription;
+
+    P = signal(0.15)
+    I = signal(0.05)
+    D = signal(0.00)
 
     ngOnInit(): void {
         this.sub = this.keydown
@@ -51,10 +57,14 @@ export class Steering implements OnInit, OnDestroy {
         this.socket.send(`SPEED ${msg}`)
     }
 
-    @HostListener('window:keydown', ['$event'])
-    handleKeyDown(event: Event) {
-        this.keydown.next(event);
+    setPid() {
+        this.socket.send(`PID ${this.P()} ${this.I()} ${this.D()}`)
     }
+
+    // @HostListener('window:keydown', ['$event'])
+    // handleKeyDown(event: Event) {
+    //     this.keydown.next(event);
+    // }
 
     ngOnDestroy(): void {
         this.sub.unsubscribe();
