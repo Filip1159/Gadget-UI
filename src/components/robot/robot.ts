@@ -24,12 +24,6 @@ export class RobotComponent implements OnInit {
 
     @ViewChild('canvas', { static: true }) canvas!: ElementRef<HTMLCanvasElement>
 
-    @HostListener('window:keydown', ['$event'])
-    handleKeyDown(event: Event) {
-        const keyboardEvent = event as KeyboardEvent;
-        console.log(keyboardEvent.key);
-    }
-
     ngOnInit() {
         drawAll(this.canvas.nativeElement);
     }

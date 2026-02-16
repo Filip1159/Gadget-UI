@@ -1,0 +1,9 @@
+<button
+    class="button"
+    (mousedown)="onPressStart()"
+    (mouseup)="onPressEnd()"
+    (mouseleave)="onPressEnd()"
+    (touchstart)="onPressStart()"
+    (touchend)="onPressEnd()">
+    <ng-content></ng-content>
+</button>

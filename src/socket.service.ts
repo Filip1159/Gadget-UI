@@ -18,4 +18,8 @@ export class SocketService {
     this.socket.onopen = () => console.log('Connected');
     this.socket.onclose = () => console.log('Disconnected');
   }
+
+  send(message: string) {
+    this.socket.send(message)
+  }
 }
