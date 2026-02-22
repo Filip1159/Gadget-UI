@@ -7,7 +7,7 @@ import { Component, Input, Output, EventEmitter } from '@angular/core'
     styleUrls: ['./slider.scss'],
 })
 export class Slider {
-    @Input() value = 0
+    @Input() value: number | undefined
 
     @Output() valueChange = new EventEmitter<number>()
 

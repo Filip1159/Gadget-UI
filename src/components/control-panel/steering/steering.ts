@@ -6,7 +6,6 @@ import { faAngleUp, faArrowsToCircle, faLightbulb } from '@fortawesome/free-soli
 import { LongPressButton } from './../longpress-button/longpress-button'
 import { Slider } from './../slider/slider'
 import { Subject, Subscription, throttleTime } from 'rxjs'
-import { RobotPreview } from "./../robot-preview/robot-preview";
 
 const KEY_TO_DIRECTION = {
     'w': 'FORWARD',
@@ -23,7 +22,7 @@ const KEY_TO_DIRECTION = {
 @Component({
     selector: 'steering',
     standalone: true,
-    imports: [FontAwesomeModule, FormsModule, LongPressButton, Slider, RobotPreview],
+    imports: [FontAwesomeModule, FormsModule, LongPressButton, Slider],
     templateUrl: './steering.html',
     styleUrl: './steering.scss',
 })

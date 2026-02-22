@@ -1,3 +1,20 @@
+const X_CENTER = 300
+const Y_CENTER = 300
+
+const X_OFFSET = 250
+const Y_OFFSET = 250
+const TOTAL_WIDTH = 100
+const TOTAL_LENGTH = 100
+const CORNER_CUT_WIDTH = 6
+const WHEEL_CUT_WIDTH = 19
+const WHEEL_CUT_LENGTH = 50
+const WHEEL_WIDTH = 16
+const WHEEL_LENGTH = 45
+
+const PX_PER_MM = 0.5
+
+const DISTANCE_SENSOR_BEAM_ANGLE = 25 / 180 * Math.PI
+
 const DISTANCE_POSITIONS = {
     'FRONT': { x: 280, y: 90 },
     'FRONT_LEFT_45': { x: 40, y: 100 },
@@ -11,17 +28,60 @@ const DISTANCE_POSITIONS = {
     'BACK_RIGHT': { x: 510, y: 430 },
 }
 
+const DIRECTION_CONFIG = {
+    'FRONT': { x: X_CENTER, y: Y_OFFSET, angle: 1.5 * Math.PI },
+    'FRONT_LEFT_45': { x: X_OFFSET + CORNER_CUT_WIDTH / 2, y: Y_OFFSET + CORNER_CUT_WIDTH / 2, angle: 1.25 * Math.PI },
+    'FRONT_LEFT': { x: X_OFFSET, y: Y_OFFSET + (TOTAL_LENGTH - WHEEL_CUT_LENGTH) / 2, angle: Math.PI },
+    'FRONT_RIGHT_45': { x: X_OFFSET + TOTAL_WIDTH - CORNER_CUT_WIDTH / 2, y: Y_OFFSET + CORNER_CUT_WIDTH / 2, angle: 1.75 * Math.PI },
+    'FRONT_RIGHT': { x: X_OFFSET + TOTAL_WIDTH, y: Y_OFFSET + (TOTAL_LENGTH - WHEEL_CUT_LENGTH) / 2, angle: 0 },
+    'BACK': { x: X_CENTER, y: Y_OFFSET + TOTAL_LENGTH, angle: 0.5 * Math.PI },
+    'BACK_LEFT_45': { x: X_OFFSET + CORNER_CUT_WIDTH / 2, y: Y_OFFSET + TOTAL_LENGTH - CORNER_CUT_WIDTH / 2, angle: 0.75 * Math.PI },
+    'BACK_LEFT': { x: X_OFFSET, y: Y_OFFSET + (TOTAL_LENGTH + WHEEL_CUT_LENGTH) / 2, angle: Math.PI },
+    'BACK_RIGHT_45': { x: X_OFFSET + TOTAL_WIDTH - CORNER_CUT_WIDTH / 2, y: Y_OFFSET + TOTAL_LENGTH - CORNER_CUT_WIDTH / 2, angle: 0.25 * Math.PI },
+    'BACK_RIGHT': { x: X_OFFSET + TOTAL_WIDTH, y: Y_OFFSET + (TOTAL_LENGTH + WHEEL_CUT_LENGTH) / 2, angle: 0 }
+}
+
 export const drawDistance = (distance: number, direction: string, canvas: HTMLCanvasElement) => {
     const ctx = canvas.getContext('2d')!
-    const position = DISTANCE_POSITIONS[direction as keyof typeof DISTANCE_POSITIONS];
-    ctx.fillStyle = 'gray';
-    ctx.fillRect(position.x, position.y, 66, -40)
-    ctx.fillStyle = 'red';
-    ctx.font = "40px sans-serif";
+    // const position = DISTANCE_POSITIONS[direction as keyof typeof DISTANCE_POSITIONS];
+    // ctx.fillStyle = 'gray';
+    // ctx.fillRect(position.x, position.y, 66, -40)
+    // ctx.fillStyle = 'red';
+    // ctx.font = "40px sans-serif";
+    // ctx.beginPath();
+    // const distanceString = distance >= 1000 ? '?' : distance.toString()
+    // ctx.fillText(distanceString, position.x, position.y);
+    // ctx.fill();
+    const config = DIRECTION_CONFIG[direction as keyof typeof DIRECTION_CONFIG];
+
+    ctx.fillStyle = 'gray'
+    ctx.beginPath()
+    ctx.arc(config.x, config.y, 300, config.angle - DISTANCE_SENSOR_BEAM_ANGLE / 2, config.angle + DISTANCE_SENSOR_BEAM_ANGLE / 2)
+    ctx.lineTo(config.x, config.y)
+    ctx.fill()
+
+    if (distance < 100) {
+        ctx.strokeStyle = 'red'
+        ctx.fillStyle = '#966'
+    } else if (distance < 200) {
+        ctx.strokeStyle = 'orange'
+        ctx.fillStyle = '#986'
+    } else if (distance < 300) {
+        ctx.strokeStyle = 'yellow'
+        ctx.fillStyle = '#996'
+    } else {
+        ctx.strokeStyle = 'green'
+        ctx.fillStyle = '#575'
+    }
+    ctx.lineWidth = 3
+
     ctx.beginPath();
-    const distanceString = distance >= 1000 ? '?' : distance.toString()
-    ctx.fillText(distanceString, position.x, position.y);
-    ctx.fill();
+    ctx.arc(config.x, config.y, distance * PX_PER_MM, config.angle - DISTANCE_SENSOR_BEAM_ANGLE / 2, config.angle + DISTANCE_SENSOR_BEAM_ANGLE / 2)
+    ctx.stroke()
+    ctx.beginPath();
+    ctx.arc(config.x, config.y, distance * PX_PER_MM, config.angle - DISTANCE_SENSOR_BEAM_ANGLE / 2, config.angle + DISTANCE_SENSOR_BEAM_ANGLE / 2)
+    ctx.lineTo(config.x, config.y)
+    ctx.fill()
 }
 
 export const drawArrowLeftForward = (canvas: HTMLCanvasElement) => {
@@ -89,57 +149,45 @@ export const drawArrowRightBackward = (canvas: HTMLCanvasElement) => {
         ctx.fillStyle = 'gray';
         ctx.fillRect(0, 0, 600, 600);
         ctx.beginPath();
-        ctx.moveTo(125, 100);
-        ctx.lineTo(475, 100);
-        ctx.lineTo(500, 120);
-        ctx.lineTo(500, 200);
-        ctx.lineTo(425, 200);
-        ctx.lineTo(425, 400);
-        ctx.lineTo(500, 400);
-        ctx.lineTo(500, 475);
-        ctx.lineTo(475, 500);
-        ctx.lineTo(125, 500);
-        ctx.lineTo(100, 475);
-        ctx.lineTo(100, 400);
-        ctx.lineTo(175, 400);
-        ctx.lineTo(175, 200);
-        ctx.lineTo(100, 200);
-        ctx.lineTo(100, 125);
-        ctx.lineTo(125, 100);
+        ctx.moveTo(X_OFFSET + CORNER_CUT_WIDTH, Y_OFFSET);
+        ctx.lineTo(X_OFFSET + TOTAL_WIDTH - CORNER_CUT_WIDTH, Y_OFFSET);
+        ctx.lineTo(X_OFFSET + TOTAL_WIDTH, Y_OFFSET + CORNER_CUT_WIDTH);
+        ctx.lineTo(X_OFFSET + TOTAL_WIDTH, Y_OFFSET + (TOTAL_LENGTH - WHEEL_CUT_LENGTH) / 2);
+        ctx.lineTo(X_OFFSET + TOTAL_WIDTH - WHEEL_CUT_WIDTH, Y_OFFSET + (TOTAL_LENGTH - WHEEL_CUT_LENGTH) / 2);
+        ctx.lineTo(X_OFFSET + TOTAL_WIDTH - WHEEL_CUT_WIDTH, Y_OFFSET + (TOTAL_LENGTH + WHEEL_CUT_LENGTH) / 2);
+        ctx.lineTo(X_OFFSET + TOTAL_WIDTH, Y_OFFSET + (TOTAL_LENGTH + WHEEL_CUT_LENGTH) / 2);
+        ctx.lineTo(X_OFFSET + TOTAL_WIDTH, Y_OFFSET + TOTAL_LENGTH - CORNER_CUT_WIDTH);
+        ctx.lineTo(X_OFFSET + TOTAL_WIDTH - CORNER_CUT_WIDTH, Y_OFFSET + TOTAL_LENGTH);
+        ctx.lineTo(X_OFFSET + CORNER_CUT_WIDTH, Y_OFFSET + TOTAL_LENGTH);
+        ctx.lineTo(X_OFFSET, Y_OFFSET + TOTAL_LENGTH - CORNER_CUT_WIDTH);
+        ctx.lineTo(X_OFFSET, Y_OFFSET + (TOTAL_LENGTH + WHEEL_CUT_LENGTH) / 2);
+        ctx.lineTo(X_OFFSET + WHEEL_CUT_WIDTH, Y_OFFSET + (TOTAL_LENGTH + WHEEL_CUT_LENGTH) / 2);
+        ctx.lineTo(X_OFFSET + WHEEL_CUT_WIDTH, Y_OFFSET + (TOTAL_LENGTH - WHEEL_CUT_LENGTH) / 2);
+        ctx.lineTo(X_OFFSET, Y_OFFSET + (TOTAL_LENGTH - WHEEL_CUT_LENGTH) / 2);
+        ctx.lineTo(X_OFFSET, Y_OFFSET + CORNER_CUT_WIDTH);
         ctx.fillStyle = 'white';
         ctx.fill();
 
+        // left wheel
         ctx.beginPath();
-        ctx.moveTo(100, 210);
-        ctx.lineTo(165, 210);
-        ctx.lineTo(165, 390);
-        ctx.lineTo(100, 390);
-        ctx.lineTo(100, 210);
+        ctx.moveTo(X_OFFSET, Y_OFFSET + (TOTAL_LENGTH - WHEEL_LENGTH) / 2);
+        ctx.lineTo(X_OFFSET + WHEEL_WIDTH, Y_OFFSET + (TOTAL_LENGTH - WHEEL_LENGTH) / 2);
+        ctx.lineTo(X_OFFSET + WHEEL_WIDTH, Y_OFFSET + (TOTAL_LENGTH + WHEEL_LENGTH) / 2);
+        ctx.lineTo(X_OFFSET, Y_OFFSET + (TOTAL_LENGTH + WHEEL_LENGTH) / 2);
         ctx.fillStyle = 'black';
         ctx.fill();
 
+        // right wheel
         ctx.beginPath();
-        ctx.moveTo(435, 210);
-        ctx.lineTo(500, 210);
-        ctx.lineTo(500, 390);
-        ctx.lineTo(435, 390);
-        ctx.lineTo(435, 210);
+        ctx.moveTo(X_OFFSET + TOTAL_WIDTH - WHEEL_WIDTH, Y_OFFSET + (TOTAL_LENGTH - WHEEL_LENGTH) / 2);
+        ctx.lineTo(X_OFFSET + TOTAL_WIDTH, Y_OFFSET + (TOTAL_LENGTH - WHEEL_LENGTH) / 2);
+        ctx.lineTo(X_OFFSET + TOTAL_WIDTH, Y_OFFSET + (TOTAL_LENGTH + WHEEL_LENGTH) / 2);
+        ctx.lineTo(X_OFFSET + TOTAL_WIDTH - WHEEL_WIDTH, Y_OFFSET + (TOTAL_LENGTH + WHEEL_LENGTH) / 2);
         ctx.fillStyle = 'black';
         ctx.fill();
 
-        drawArrowLeftForward(canvas);
-        drawArrowLeftBackward(canvas);
-        drawArrowRightForward(canvas);
-        drawArrowRightBackward(canvas);
-        // drawDistance(150, 'front', canvas);
-        // drawDistance(100, 'frontLeft45', canvas);
-        // drawDistance(50, 'frontLeft', canvas);
-        // drawDistance(120, 'frontRight45', canvas);
-        // drawDistance(80, 'frontRight', canvas);
-        // drawDistance(200, 'back', canvas);
-        // drawDistance(150, 'backLeft45', canvas);
-        // drawDistance(100, 'backLeft', canvas);
-        // drawDistance(180, 'backRight45', canvas);
-        // drawDistance(130, 'backRight', canvas);
-
+        // drawArrowLeftForward(canvas);
+        // drawArrowLeftBackward(canvas);
+        // drawArrowRightForward(canvas);
+        // drawArrowRightBackward(canvas);
     }
