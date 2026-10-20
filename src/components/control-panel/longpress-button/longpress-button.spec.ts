@@ -1,3 +1,4 @@
+import { TestBed } from '@angular/core/testing';
 import { LongPressButton } from './longpress-button';
 
 describe('LongPressButton', () => {
@@ -7,7 +8,7 @@ describe('LongPressButton', () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
-    button = new LongPressButton();
+    button = TestBed.runInInjectionContext(() => new LongPressButton());
     presses = 0;
     releases = 0;
     button.press.subscribe(() => presses++);

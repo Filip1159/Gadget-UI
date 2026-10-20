@@ -1,7 +1,13 @@
 <app-header></app-header>
+@if (socket.lastError(); as error) {
+    <div class="error-banner" role="alert">Robot rejected a command: {{ error }}</div>
+}
 @if (socket.status() !== 'open') {
     <div class="connection-banner">
         {{ socket.status() === 'connecting' ? 'Connecting to' : 'Disconnected from' }} robot ({{ socket.url }})...
+        <input #url class="connection-banner__input" [value]="socket.url" aria-label="Robot WebSocket URL" (keydown.enter)="socket.setUrl(url.value)" />
+        <input #token class="connection-banner__input" type="password" placeholder="token (optional)" [value]="socket.token" aria-label="Robot token" (keydown.enter)="socket.setToken(token.value); socket.setUrl(url.value)" />
+        <button type="button" (click)="socket.setToken(token.value); socket.setUrl(url.value)">Connect</button>
     </div>
 }
 <div class="container">

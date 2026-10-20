@@ -8,6 +8,7 @@ class FakeWebSocket {
   onopen?: () => void; onclose?: () => void; onerror?: () => void; onmessage?: (e: { data: string }) => void;
   constructor(public url: string) { FakeWebSocket.instances.push(this); }
   send(message: string) { this.sent.push(message); }
+  close() { /* the service ignores the old socket's onclose; tests trigger drop() themselves */ }
   open() { this.readyState = FakeWebSocket.OPEN; this.onopen?.(); }
   drop() { this.readyState = FakeWebSocket.CLOSED; this.onclose?.(); }
 }
@@ -61,6 +62,49 @@ describe('SocketService', () => {
     expect(FakeWebSocket.instances.length).toBe(2);
     vi.advanceTimersByTime(1);
     expect(FakeWebSocket.instances.length).toBe(3);
+  });
+
+  it('setUrl validates, reconnects to the new address and does not auto-reconnect to the old one', () => {
+    const store: Record<string, string> = {};
+    vi.stubGlobal('localStorage', { getItem: (k: string) => store[k] ?? null, setItem: (k: string, v: string) => { store[k] = v; } });
+    service.connect();
+    FakeWebSocket.instances[0].open();
+    expect(service.setUrl('http://nope')).toBe(false);
+    expect(service.setUrl('ws://robot.local:88')).toBe(true);
+    expect(FakeWebSocket.instances.length).toBe(2);
+    expect(FakeWebSocket.instances[1].url).toBe('ws://robot.local:88');
+    FakeWebSocket.instances[0].drop(); // old socket closing must not trigger a reconnect
+    vi.advanceTimersByTime(20000);
+    expect(FakeWebSocket.instances.length).toBe(2);
+  });
+
+  it('sends AUTH as the very first frame when a token is configured', () => {
+    const store: Record<string, string> = { robotToken: 'secret' };
+    vi.stubGlobal('localStorage', { getItem: (k: string) => store[k] ?? null, setItem: (k: string, v: string) => { store[k] = v; } });
+    service.connect();
+    FakeWebSocket.instances[0].open();
+    expect(FakeWebSocket.instances[0].sent).toEqual(['AUTH secret']);
+  });
+
+  it('does not send AUTH without a token', () => {
+    const store: Record<string, string> = {};
+    vi.stubGlobal('localStorage', { getItem: (k: string) => store[k] ?? null, setItem: (k: string, v: string) => { store[k] = v; } });
+    service.connect();
+    FakeWebSocket.instances[0].open();
+    expect(FakeWebSocket.instances[0].sent).toEqual([]);
+  });
+
+  it('exposes state and surfaces robot errors for a few seconds', () => {
+    const states: unknown[] = [];
+    service.state$.subscribe(s => states.push(s));
+    service.connect();
+    const ws = FakeWebSocket.instances[0];
+    ws.onmessage?.({ data: 'STATE SPEED=500 P=0.1 I=0.2 D=0.3 MEASURING=0' });
+    expect(states).toEqual([{ speed: 500, p: 0.1, i: 0.2, d: 0.3, measuring: false }]);
+    ws.onmessage?.({ data: 'ERR invalid PID' });
+    expect(service.lastError()).toBe('invalid PID');
+    vi.advanceTimersByTime(4000);
+    expect(service.lastError()).toBeNull();
   });
 
   it('emits only valid robot frames on robot$', () => {

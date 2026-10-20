@@ -1,13 +1,15 @@
 import { Injectable, signal } from '@angular/core';
-import { Subject, filter, map } from 'rxjs';
-import { Command, RobotMessage, encodeCommand, parseMessage } from './protocol';
+import { Subject, filter, map, share } from 'rxjs';
+import { Command, RobotMessage, RobotState, Sweep, encodeCommand, parseMessage } from './protocol';
 
 export type SocketStatus = 'connecting' | 'open' | 'closed';
 
 const DEFAULT_ROBOT_URL = 'ws://192.168.1.16:88';
 const ROBOT_URL_STORAGE_KEY = 'robotUrl';
+const ROBOT_TOKEN_STORAGE_KEY = 'robotToken';
 const MIN_RECONNECT_MS = 500;
 const MAX_RECONNECT_MS = 10000;
+const ERROR_VISIBLE_MS = 4000;
 
 @Injectable({ providedIn: 'root' })
 export class SocketService {
@@ -15,6 +17,7 @@ export class SocketService {
   private socket?: WebSocket;
   private reconnectTimer?: ReturnType<typeof setTimeout>;
   private reconnectDelayMs = MIN_RECONNECT_MS;
+  private errorTimer?: ReturnType<typeof setTimeout>;
 
   public messages$ = new Subject<string>();
 
@@ -28,15 +31,70 @@ export class SocketService {
       return parsed;
     }),
     filter((m): m is RobotMessage => m !== undefined),
+    share(), // parse (and log bad frames) once, however many streams are derived from it
   );
+
+  /** One complete sweep per frame. */
+  public sweeps$ = this.robot$.pipe(
+    filter((m): m is Extract<RobotMessage, { type: 'measure' }> => m.type === 'measure'),
+    map(m => m.sweep as Sweep),
+  );
+
+  /** Robot state, sent by the firmware right after (authenticated) connect. */
+  public state$ = this.robot$.pipe(
+    filter((m): m is Extract<RobotMessage, { type: 'state' }> => m.type === 'state'),
+    map(m => m.state as RobotState),
+  );
+
+  /** Rejection reasons ("ERR <reason>") for commands the robot did not accept. */
+  public errors$ = this.robot$.pipe(
+    filter((m): m is Extract<RobotMessage, { type: 'error' }> => m.type === 'error'),
+    map(m => m.reason),
+  );
+
   public status = signal<SocketStatus>('closed');
+
+  /** Last "ERR <reason>" from the robot; clears itself after a few seconds. */
+  public lastError = signal<string | null>(null);
 
   /** Fires every time a connection is (re)established. */
   public opened$ = new Subject<void>();
 
+  constructor() {
+    this.errors$.subscribe(reason => {
+      this.lastError.set(reason);
+      clearTimeout(this.errorTimer);
+      this.errorTimer = setTimeout(() => this.lastError.set(null), ERROR_VISIBLE_MS);
+    });
+  }
+
   /** Robot address: `localStorage.robotUrl` overrides the default, e.g. `localStorage.robotUrl = 'ws://robot.local:88'`. */
   get url(): string {
     return localStorage.getItem(ROBOT_URL_STORAGE_KEY) ?? DEFAULT_ROBOT_URL;
+  }
+
+  /** Optional shared secret, only needed if the firmware defines WS_TOKEN. Sent as the first frame on (re)connect. */
+  get token(): string {
+    return localStorage.getItem(ROBOT_TOKEN_STORAGE_KEY) ?? '';
+  }
+
+  setToken(token: string): void {
+    localStorage.setItem(ROBOT_TOKEN_STORAGE_KEY, token);
+  }
+
+  /** Saves a new robot address and reconnects to it right away. Returns false for an invalid URL. */
+  setUrl(url: string): boolean {
+    if (!/^wss?:\/\/\S+$/.test(url)) {
+      return false;
+    }
+    localStorage.setItem(ROBOT_URL_STORAGE_KEY, url);
+    clearTimeout(this.reconnectTimer);
+    const old = this.socket;
+    this.socket = undefined; // makes the old socket's onclose a no-op (no auto-reconnect to the old URL)
+    old?.close();
+    this.reconnectDelayMs = MIN_RECONNECT_MS;
+    this.connect();
+    return true;
   }
 
   /** Idempotent: does nothing if already connecting/open. Reconnects automatically after a drop. */
@@ -54,6 +112,9 @@ export class SocketService {
 
     socket.onopen = () => {
       this.reconnectDelayMs = MIN_RECONNECT_MS;
+      if (this.token) {
+        socket.send(encodeCommand({ type: 'auth', token: this.token })); // must be the first frame
+      }
       this.status.set('open');
       this.opened$.next();
     };

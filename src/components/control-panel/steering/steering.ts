@@ -1,28 +1,17 @@
-import { Component, computed, inject, OnInit, OnDestroy, signal } from '@angular/core'
+import { Component, computed, HostListener, inject, OnInit, OnDestroy, signal } from '@angular/core'
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
 import { FormsModule } from '@angular/forms'
 import { SocketService } from '../../../socket.service'
 import { DriveDirection } from '../../../protocol'
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome'
-import { faAngleUp, faArrowsToCircle, faLightbulb } from '@fortawesome/free-solid-svg-icons'
+import { faAngleUp, faArrowsToCircle } from '@fortawesome/free-solid-svg-icons'
 import { LongPressButton } from './../longpress-button/longpress-button'
 import { Slider } from './../slider/slider'
+import { KeyboardSteering } from './keyboard-steering'
 import { Subject, Subscription, throttleTime } from 'rxjs'
-
-const KEY_TO_DIRECTION: Record<string, DriveDirection> = {
-    'w': 'FORWARD',
-    'q': 'FORWARD_LEFT',
-    'e': 'FORWARD_RIGHT',
-    'a': 'LEFT',
-    's': 'STOP',
-    'd': 'RIGHT',
-    'x': 'BACKWARD',
-    'z': 'BACKWARD_LEFT',
-    'c': 'BACKWARD_RIGHT'
-}
 
 @Component({
     selector: 'steering',
-    standalone: true,
     imports: [FontAwesomeModule, FormsModule, LongPressButton, Slider],
     templateUrl: './steering.html',
     styleUrl: './steering.scss',
@@ -33,32 +22,32 @@ export class Steering implements OnInit, OnDestroy {
 
     private socket = inject(SocketService)
 
-    private keydown = new Subject<Event>();
-    private sub!: Subscription;
+    private keyboard = new KeyboardSteering(direction => this.move(direction))
     private speed$ = new Subject<number>();
     private speedSub!: Subscription;
 
     connected = computed(() => this.socket.status() === 'open')
 
+    speed = signal(1000)
     P = signal(0.15)
     I = signal(0.05)
     D = signal(0.00)
+
+    constructor() {
+        // The robot's actual settings win over the defaults above.
+        this.socket.state$.pipe(takeUntilDestroyed()).subscribe(state => {
+            this.speed.set(state.speed)
+            this.P.set(state.p)
+            this.I.set(state.i)
+            this.D.set(state.d)
+        })
+    }
 
     ngOnInit(): void {
         // Slider fires an input event per step while dragging; send at most one per 100ms, keeping the final value.
         this.speedSub = this.speed$
             .pipe(throttleTime(100, undefined, { leading: true, trailing: true }))
             .subscribe(value => this.socket.send({ type: 'speed', value }))
-
-        this.sub = this.keydown
-        .pipe(throttleTime(500))
-        .subscribe(event => {
-            const keyboardEvent = event as KeyboardEvent
-            const direction = KEY_TO_DIRECTION[keyboardEvent.key.toLowerCase()]
-            if (direction) {
-                this.socket.send({ type: 'drive', direction })
-            }
-        });
     }
 
     move(direction: DriveDirection): void {
@@ -66,6 +55,7 @@ export class Steering implements OnInit, OnDestroy {
     }
 
     setSpeed(speed: number): void {
+        this.speed.set(speed)
         this.speed$.next(speed)
     }
 
@@ -79,13 +69,44 @@ export class Steering implements OnInit, OnDestroy {
         this.socket.send({ type: 'pid', p: this.P(), i: this.I(), d: this.D() })
     }
 
-    // @HostListener('window:keydown', ['$event'])
-    // handleKeyDown(event: Event) {
-    //     this.keydown.next(event);
-    // }
+    // Ignore typing in the PID fields and browser shortcuts such as Ctrl+C / Ctrl+W.
+    private isSteeringKey(event: KeyboardEvent): boolean {
+        const target = event.target as HTMLElement | null
+        const typing = !!target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)
+        return !typing && !event.ctrlKey && !event.metaKey && !event.altKey
+    }
+
+    @HostListener('window:keydown', ['$event'])
+    onKeyDown(event: KeyboardEvent) {
+        if (this.isSteeringKey(event)) {
+            if (event.key === ' ') {
+                event.preventDefault() // Space is the emergency stop, do not also click a focused button
+            }
+            this.keyboard.keyDown(event.key)
+        }
+    }
+
+    // keyup is not filtered: if a key was held, releasing it must always stop the robot.
+    @HostListener('window:keyup', ['$event'])
+    onKeyUp(event: KeyboardEvent) {
+        this.keyboard.keyUp(event.key)
+    }
+
+    @HostListener('window:blur')
+    onBlur() {
+        this.keyboard.blur()
+    }
+
+    // A hidden tab may not get a blur or keyup, so stop when it goes to the background.
+    @HostListener('document:visibilitychange')
+    onVisibilityChange() {
+        if (document.hidden) {
+            this.keyboard.blur()
+        }
+    }
 
     ngOnDestroy(): void {
-        this.sub.unsubscribe();
+        this.keyboard.destroy();
         this.speedSub.unsubscribe();
     }
 }

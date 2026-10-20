@@ -14,3 +14,16 @@
     color: white;
     text-align: center;
 }
+
+.connection-banner__input {
+    margin: 0 8px;
+    padding: 2px 6px;
+    min-width: 16em;
+}
+
+.error-banner {
+    padding: 6px 16px;
+    background: #ff9800;
+    color: black;
+    text-align: center;
+}

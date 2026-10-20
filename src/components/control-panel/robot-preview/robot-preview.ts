@@ -1,4 +1,4 @@
-import { Component, ElementRef, effect, inject, OnInit, signal, ViewChild } from "@angular/core";
+import { afterNextRender, Component, ElementRef, effect, inject, signal, viewChild } from "@angular/core";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { interval } from "rxjs";
 import { drawAll, drawDistance } from "./drawing";
@@ -12,7 +12,7 @@ const STALE_AFTER_MS = 3000;
     templateUrl: "./robot-preview.html",
     styleUrls: ["./robot-preview.scss"]
 })
-export class RobotPreview implements OnInit {
+export class RobotPreview {
 
     private socket = inject(SocketService)
     public isMeasuring = signal(false);
@@ -22,24 +22,27 @@ export class RobotPreview implements OnInit {
     private redrawScheduled = false;
 
     constructor() {
-        this.socket.robot$.pipe(takeUntilDestroyed()).subscribe(message => {
+        this.socket.sweeps$.pipe(takeUntilDestroyed()).subscribe(sweep => {
             // A frame is one atomic sweep: replace the whole picture.
-            this.distances = message.sweep;
+            this.distances = sweep;
             this.lastSweepAt = Date.now();
             this.scheduleRedraw();
         });
 
-        this.socket.opened$.pipe(takeUntilDestroyed()).subscribe(() => {
-            // The robot keeps its continuous-measurement flag across page reloads/reconnects,
-            // so bring both sides back to a known state.
-            this.isMeasuring.set(false);
-            this.socket.send({ type: 'measureStop' });
-        });
+        // The robot reports its own state on connect, so the button always matches reality.
+        this.socket.state$.pipe(takeUntilDestroyed()).subscribe(state => this.isMeasuring.set(state.measuring));
 
         // Drop readings that stopped arriving instead of showing them as current.
         interval(500).pipe(takeUntilDestroyed()).subscribe(() => {
             if (this.distances.size > 0 && Date.now() - this.lastSweepAt > STALE_AFTER_MS) {
                 this.clearDistances();
+            }
+        });
+
+        afterNextRender(() => {
+            const canvas = this.canvas()?.nativeElement;
+            if (canvas) {
+                this.initCanvas(canvas);
             }
         });
 
@@ -51,10 +54,9 @@ export class RobotPreview implements OnInit {
         });
     }
 
-    @ViewChild('canvas', { static: true }) canvas!: ElementRef<HTMLCanvasElement>
+    private canvas = viewChild<ElementRef<HTMLCanvasElement>>('canvas')
 
-    ngOnInit() {
-        const canvas = this.canvas.nativeElement;
+    private initCanvas(canvas: HTMLCanvasElement) {
         // Back the canvas with device pixels but keep drawing in 600x600 CSS-pixel coordinates.
         const dpr = window.devicePixelRatio || 1;
         const size = canvas.width;
@@ -95,7 +97,7 @@ export class RobotPreview implements OnInit {
     }
 
     private redrawCanvas() {
-        const canvas = this.canvas?.nativeElement;
+        const canvas = this.canvas()?.nativeElement;
         if (!canvas) {
             return;
         }

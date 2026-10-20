@@ -1,5 +1,5 @@
 <div class="steering">
-    <slider [value]="1000" (valueChange)="setSpeed($event)"></slider>
+    <slider [value]="speed()" (valueChange)="setSpeed($event)"></slider>
 
     <div class="steering__direction">
         <longpress-button label="Forward Left" [disabled]="!connected()" (press)="move('FORWARD_LEFT')" (release)="move('STOP')">

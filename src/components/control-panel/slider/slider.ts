@@ -1,19 +1,15 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core'
+import { Component, model } from '@angular/core'
 
 @Component({
     selector: 'slider',
-    standalone: true,
     templateUrl: './slider.html',
     styleUrls: ['./slider.scss'],
 })
 export class Slider {
-    @Input() value: number | undefined
-
-    @Output() valueChange = new EventEmitter<number>()
+    /** Two-way bindable: [(value)]="..." or [value] + (valueChange). */
+    value = model<number>(0)
 
     onInput(event: Event): void {
-        const newValue = Number((event.target as HTMLInputElement).value)
-        this.value = newValue
-        this.valueChange.emit(newValue)
+        this.value.set(Number((event.target as HTMLInputElement).value))
     }
 }

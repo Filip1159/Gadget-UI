@@ -4,62 +4,70 @@ Angular 21 (zoneless, standalone components, signals) single-page app that conne
 
 ## Stack / commands
 
-- Angular 21.1.4, standalone components, no NgModules.
-- RxJS 7.8 for event streams (`Subject`, `throttleTime`, `takeUntil`).
+- Angular 21.1.4, standalone components, no NgModules. New code uses signal APIs (`input()`, `output()`, `model()`, `viewChild()`, `signal()`), not the legacy decorators.
+- RxJS 7.8 for event streams (`Subject`, `throttleTime`, `share`, `takeUntilDestroyed`).
 - FontAwesome (`@fortawesome/angular-fontawesome`) for icons.
-- Test runner: Vitest (not Karma/Jasmine) + jsdom.
-- `npm start` — `ng serve` (dev server).
-- `npm run build` — `ng build`.
-- `npm run watch` — `ng build --watch --configuration development`.
-- `npm test` — `ng test` (Vitest).
+- Test runner: Vitest (not Karma/Jasmine) + jsdom. Specs live next to the code (`*.spec.ts`); `app.spec.ts` renders the whole app against a fake `WebSocket` and a fake canvas context.
+- `npm start` - `ng serve` (dev server, http only: `ws://` is blocked from an `https://` page).
+- `npm run build` - `ng build`.
+- `npm run watch` - `ng build --watch --configuration development`.
+- `npm test` - `ng test` (Vitest).
 
 ## Architecture
 
 ```
-app/
-└── components/
-    ├── header/                     presentational header
-    └── control-panel/
-        ├── control-panel.ts/html   hosts <steering> + <robot-preview>, no logic of its own
-        ├── steering/               direction/speed/PID controls, keyboard input
-        ├── longpress-button/       emits `press` repeatedly while held (used for continuous direction commands)
-        ├── slider/                 generic numeric slider, two-way-bindable via @Input/@Output
-        └── robot-preview/          canvas visualization of the robot + live sensor cones
-src/socket.service.ts                singleton WebSocket wrapper (root-provided): status signal, reconnect, typed send(), robot$ stream
-src/protocol.ts                      typed wire protocol: Command/encodeCommand, parseMessage, direction types
+src/
+  main.ts, app/                    bootstrap; App connects the socket and shows the connection/error banners
+  protocol.ts                      typed wire protocol: Command + encodeCommand, parseMessage (MEASURE / STATE / ERR), direction types
+  socket.service.ts                singleton WebSocket wrapper (root-provided)
+  components/
+    header/                        presentational header
+    control-panel/
+      control-panel.ts/html        hosts <steering> + <robot-preview>, no logic of its own
+      steering/                    direction pad, speed slider, PID form; keyboard-steering.ts is the framework-free keyboard logic
+      longpress-button/            emits `press` immediately and every 500ms while held, `release` once at the end
+      slider/                      numeric slider with a `model()` value (two-way bindable)
+      robot-preview/               canvas visualization (drawing.ts = pure drawing code) + sensor cones
 ```
 
-`SocketService` (`src/socket.service.ts`) is the **only** WebSocket connection in the app — a root-provided singleton holding one `WebSocket` and one RxJS `Subject<string>` (`messages$`) that every incoming text frame is pushed onto, unparsed. `connect()` currently hardcodes `ws://192.168.1.16:88` — update this if the robot's IP changes (no env-based config exists yet). `send(message: string)` writes raw strings directly to the socket, no outgoing queue/backpressure.
+`SocketService` is the **only** WebSocket in the app. It is connected once by `App`. It provides:
+- `status` signal (`connecting | open | closed`), automatic reconnect with exponential backoff (0.5s to 10s), `onerror` handling.
+- `url` / `setUrl()` and `token` / `setToken()`, persisted in `localStorage` (`robotUrl`, `robotToken`; default `ws://192.168.1.16:88`). If a token is set it is sent as the very first frame (`AUTH <token>`) on every (re)connect.
+- `send(command: Command): boolean` - typed; returns `false` (and warns) when the socket is not open, never throws.
+- Parsed streams, all fed from one validated parse (`robot$` is `share()`d): `sweeps$` (one full sensor sweep per frame), `state$` (robot settings after connect), `errors$` (robot rejections, also surfaced as `lastError`, auto-cleared after 4s). Unrecognised/malformed frames are logged once and dropped. `messages$` is the raw text stream; prefer the parsed ones.
 
-Each component that cares about `messages$` subscribes directly and parses raw text itself — there is no central store or typed message bus. Currently the only subscriber is `RobotPreview`.
+Components never build or parse wire strings themselves: they send `{ type: 'drive', direction }` etc. and subscribe to the parsed streams.
 
 ## Communication schema (WebSocket, plain text, no JSON)
 
-See the firmware repo's `CLAUDE.md` for the authoritative wire format; mirrored here for quick reference.
+See the firmware repo's `CLAUDE.md` for the authoritative wire format; mirrored here for quick reference. Everything below is typed in `protocol.ts` (`Command`, `RobotMessage`).
 
-**Outgoing (this app → robot)**, all sent via `SocketService.send()`:
-- `<DIRECTION>` — one of `FORWARD`, `FORWARD_LEFT`, `FORWARD_RIGHT`, `LEFT`, `STOP`/`BRAKE`, `RIGHT`, `BACKWARD`, `BACKWARD_LEFT`, `BACKWARD_RIGHT` — sent from `Steering.move()` (button `(mousedown)`/`longpress-button` press events) and from the `w/q/e/a/s/d/x/z/c` keyboard shortcuts (`KEY_TO_DIRECTION` map in `steering.ts`, throttled to 500ms via `throttleTime`). Note: the keyboard `@HostListener` is currently commented out in `steering.ts` — keyboard steering is wired but not actually bound to an event source.
-- `SPEED <number>` — from the speed `Slider`.
-- `PID <P> <I> <D>` — from the three PID gain signals in `Steering` (`P`, `I`, `D`), sent on `setPid()`.
-- `MEASURE_START` / `MEASURE_STOP` — from the "Start/Stop Measuring" toggle button in `RobotPreview` (`toggleMeasurement()`), enables/disables the robot's continuous 200ms sensor-sweep broadcast.
+**Outgoing (this app -> robot)**:
+- `AUTH <token>` - only if a token is configured; always first.
+- `<DIRECTION>` - one of `FORWARD`, `FORWARD_LEFT`, `FORWARD_RIGHT`, `LEFT`, `STOP`, `RIGHT`, `BACKWARD`, `BACKWARD_LEFT`, `BACKWARD_RIGHT` (`DriveDirection`; anything else is rejected by the firmware with `ERR`). Sent from the direction buttons (`longpress-button` repeats every 500ms while held; `release` sends `STOP`; buttons are disabled while the socket is not open, STOP never is) and from the keyboard through `KeyboardSteering`: `w q e a d x z c` = the eight directions while held (keydown sends + 500ms heartbeat; keyup sends the direction of a key still held or `STOP`), `s`, Space, Esc, window blur and a hidden tab = `STOP`; keystrokes in inputs and Ctrl/Alt/Meta combos are ignored. The firmware stops by itself after 1s without a direction command, which is why the heartbeat matters.
+- `SPEED <number>` - from the speed slider (throttled to one per 100ms, trailing value always sent).
+- `PID <P> <I> <D>` - from the PID form; only sent for finite numbers >= 0 (the button is disabled otherwise).
+- `MEASURE_START` / `MEASURE_STOP` - from the "Start/Stop Measuring" button.
 
-**Incoming (robot → this app)**, handled only in `RobotPreview`'s constructor subscription to `messages$`:
-- `MEASURE <DIRECTION>=<mm|OOR> ...` � one frame per sweep containing all 10 sensors, e.g. `MEASURE FRONT=412 FRONT_LEFT_45=OOR ...` (`OOR` = out of range, drawn as a dashed outline). Parsed by `parseSweep()` in `drawing.ts`; the whole frame is dropped if any token is malformed or names an unknown sensor, and a valid frame replaces the entire distance map. Readings are cleared if no sweep arrives for 3s, on disconnect, and when measuring is stopped.
+**Incoming (robot -> this app)**:
+- `MEASURE <DIRECTION>=<mm|OOR> ...` - one frame per sweep with all 10 sensors (`OOR` = out of range, drawn as a dashed outline). All-or-nothing parse: a malformed token or unknown sensor drops the whole frame; a valid frame replaces the whole distance map.
+- `STATE SPEED=<n> P=<f> I=<f> D=<f> MEASURING=<0|1>` - sent right after connect; initialises the slider, PID fields and the measuring button, so UI and robot cannot disagree after a reload/reconnect.
+- `ERR <reason>` - a command was rejected; shown in an orange banner.
 
 ## Robot preview rendering (`robot-preview/`)
 
-- `distances: Map<string, number>` in `RobotPreview` accumulates the latest value per sensor direction, keyed by the direction string from the wire format.
-- `redrawCanvas()` does a **full imperative repaint** on every incoming measurement: `drawAll(canvas)` (clears + redraws the chassis/wheels) then iterates `distances` and calls `drawDistance(distance, direction, canvas)` for every known sensor. This is not React/signals-driven — it's plain `CanvasRenderingContext2D` calls with no diffing, memoization, or `requestAnimationFrame` loop; every message triggers one synchronous full repaint.
-- `drawing.ts` has two parallel direction-keyed config tables: `DISTANCE_POSITIONS` (currently unused — dead code left over from an earlier text-label rendering approach, see commented-out block at the top of `drawDistance`) and `DIRECTION_CONFIG` (actually used — `{x, y, angle}` per sensor, used to draw a colored arc "cone" whose radius = `distance * PX_PER_MM` and color encodes distance bands: red <100mm, orange <200mm, yellow <300mm, green ≥300mm).
-- `ChangeDetectorRef` is injected in `RobotPreview` but never used — dead code from an earlier (unnecessary) attempt to fix a rendering bug via manual change detection; irrelevant here since canvas painting is imperative and bypasses Angular's template/change-detection pipeline entirely.
+- `RobotPreview` keeps the latest `Sweep` (direction -> mm | null) and a timestamp. Frames are coalesced: each sweep schedules a single `requestAnimationFrame` repaint. Readings are cleared if no sweep arrives for 3s, on disconnect, and when measuring is stopped.
+- `redrawCanvas()` is a full imperative repaint: `drawAll(canvas)` (background + chassis + wheels) then `drawDistance(distance, direction, canvas)` per sensor. `drawing.ts` is pure canvas code with `DIRECTION_CONFIG` (`{x, y, angle}` per sensor) and colour bands: red <100mm, orange <200mm, yellow <300mm, green >= 300mm; `null` (OOR) is a dashed full-range outline.
+- The canvas is HiDPI-aware: its backing store is scaled by `devicePixelRatio` in `initCanvas()` (run via `afterNextRender`), while all drawing code stays in 600x600 logical pixels.
 
 ## Known gotchas / fragile areas
 
-- **One bad frame used to be able to permanently stall the preview.** `distances.forEach(...)` inside `redrawCanvas()` iterates in Map insertion order; if `drawDistance` or a bad parse ever throws, RxJS's `Subject` subscriber swallows the exception and rethrows it asynchronously via `setTimeout` — completely disconnected from the `console.log` that printed right before it. Any Map entry positioned after the exception point in iteration order would then silently stop being redrawn on every subsequent message, even though new data kept arriving and logging normally (the Map itself is never cleared or reset). Mitigated by validating `direction`/`distance` before insertion (see above), but if you add new incoming message types or fields, keep validating before they hit shared render state — don't rely on `Subject` subscribers to surface errors visibly.
-- **No `ngOnDestroy` unsubscribe** for the `messages$.subscribe(...)` in `RobotPreview` — harmless today since the singleton `SocketService`/component both live for the app's lifetime, but would leak if `RobotPreview` were ever conditionally created/destroyed.
-- **Hardcoded robot IP** (`ws://192.168.1.16:88` in `socket.service.ts`) — breaks silently (just never connects) if the robot's IP changes; there's no connection-status UI beyond `console.log('Connected'/'Disconnected')`.
-- **No reconnect logic** — if the WebSocket drops, `SocketService` does not retry; the page must be reloaded.
-- Continuous measurement mode produces data at ~2-3Hz in practice (sensor sweep takes ~330ms despite a 200ms request interval on the firmware side) — don't expect smoother than that from the robot regardless of frontend changes.
+- **Validate before touching shared render state.** `Subject` subscribers swallow exceptions (rethrown asynchronously), so a throw inside a subscriber looks like data silently stopping. All parsing is therefore done up front in `protocol.ts` and bad frames never reach `RobotPreview`; keep it that way when adding message types.
+- **Everything the robot should do on its own is also enforced in firmware** (stop on disconnect, 1s command timeout), because browser tabs die. Do not rely on the UI alone to stop the robot.
+- `ws://` only works from an `http://` page (mixed-content rule). The token is sent in clear text.
+- `LongPressButton` emits `press` synchronously on pointer down (so even a very short tap sends its direction before the `STOP`), and guards against a second start while pressed; keep both properties if you touch it.
+- Continuous measurement is paced by the firmware (a new sweep is requested every 200ms, sweeps are ranged in parallel), so the frontend cannot make it update faster.
+- jsdom has no canvas: component tests must mock `HTMLCanvasElement.prototype.getContext` (see `app.spec.ts`).
 
 ## Companion firmware
 

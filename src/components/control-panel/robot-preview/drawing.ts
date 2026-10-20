@@ -18,19 +18,6 @@ const MAX_RANGE_PX = 300
 
 const DISTANCE_SENSOR_BEAM_ANGLE = 25 / 180 * Math.PI
 
-const DISTANCE_POSITIONS = {
-    'FRONT': { x: 280, y: 90 },
-    'FRONT_LEFT_45': { x: 40, y: 100 },
-    'FRONT_LEFT': { x: 25, y: 200 },
-    'FRONT_RIGHT_45': { x: 500, y: 100 },
-    'FRONT_RIGHT': { x: 510, y: 200 },
-    'BACK': { x: 280, y: 540 },
-    'BACK_LEFT_45': { x: 40, y: 520 },
-    'BACK_LEFT': { x: 25, y: 430 },
-    'BACK_RIGHT_45': { x: 500, y: 520 },
-    'BACK_RIGHT': { x: 510, y: 430 },
-}
-
 const DIRECTION_CONFIG: Record<SensorDirection, { x: number, y: number, angle: number }> = {
     'FRONT': { x: X_CENTER, y: Y_OFFSET, angle: 1.5 * Math.PI },
     'FRONT_LEFT_45': { x: X_OFFSET + CORNER_CUT_WIDTH / 2, y: Y_OFFSET + CORNER_CUT_WIDTH / 2, angle: 1.25 * Math.PI },
@@ -46,15 +33,6 @@ const DIRECTION_CONFIG: Record<SensorDirection, { x: number, y: number, angle: n
 
 export const drawDistance = (distance: number | null, direction: SensorDirection, canvas: HTMLCanvasElement) => {
     const ctx = canvas.getContext('2d')!
-    // const position = DISTANCE_POSITIONS[direction as keyof typeof DISTANCE_POSITIONS];
-    // ctx.fillStyle = 'gray';
-    // ctx.fillRect(position.x, position.y, 66, -40)
-    // ctx.fillStyle = 'red';
-    // ctx.font = "40px sans-serif";
-    // ctx.beginPath();
-    // const distanceString = distance >= 1000 ? '?' : distance.toString()
-    // ctx.fillText(distanceString, position.x, position.y);
-    // ctx.fill();
     const config = DIRECTION_CONFIG[direction];
 
     if (!config) {
@@ -104,66 +82,6 @@ export const drawDistance = (distance: number | null, direction: SensorDirection
     ctx.fill()
 }
 
-export const drawArrowLeftForward = (canvas: HTMLCanvasElement) => {
-        const ctx = canvas.getContext('2d')!
-        ctx.fillStyle = 'orange';
-        ctx.beginPath();
-        ctx.moveTo(50, 210)
-        ctx.lineTo(90, 250);
-        ctx.lineTo(70, 250);
-        ctx.lineTo(70, 290);
-        ctx.lineTo(30, 290);
-        ctx.lineTo(30, 250);
-        ctx.lineTo(10, 250);
-        ctx.lineTo(50, 210);
-        ctx.fill();
-    }
-
-export const drawArrowLeftBackward = (canvas: HTMLCanvasElement) => {
-        const ctx = canvas.getContext('2d')!
-        ctx.fillStyle = 'orange';
-        ctx.beginPath();
-        ctx.moveTo(50, 390)
-        ctx.lineTo(90, 350);
-        ctx.lineTo(70, 350);
-        ctx.lineTo(70, 310);
-        ctx.lineTo(30, 310);
-        ctx.lineTo(30, 350);
-        ctx.lineTo(10, 350);
-        ctx.lineTo(50, 390);
-        ctx.fill();
-    }
-
-export const drawArrowRightForward = (canvas: HTMLCanvasElement) => {
-        const ctx = canvas.getContext('2d')!
-        ctx.fillStyle = 'orange';
-        ctx.beginPath();
-        ctx.moveTo(550, 210)
-        ctx.lineTo(510, 250);
-        ctx.lineTo(530, 250);
-        ctx.lineTo(530, 290);
-        ctx.lineTo(570, 290);
-        ctx.lineTo(570, 250);
-        ctx.lineTo(590, 250);
-        ctx.lineTo(550, 210);
-        ctx.fill();
-    }
-
-export const drawArrowRightBackward = (canvas: HTMLCanvasElement) => {
-        const ctx = canvas.getContext('2d')!
-        ctx.fillStyle = 'orange';
-        ctx.beginPath();
-        ctx.moveTo(550, 390)
-        ctx.lineTo(510, 350);
-        ctx.lineTo(530, 350);
-        ctx.lineTo(530, 310);
-        ctx.lineTo(570, 310);
-        ctx.lineTo(570, 350);
-        ctx.lineTo(590, 350);
-        ctx.lineTo(550, 390);
-        ctx.fill();
-    }
-
  export const drawAll = (canvas: HTMLCanvasElement) => {
         const ctx = canvas.getContext('2d')!
         ctx.fillStyle = 'gray';
@@ -206,8 +124,4 @@ export const drawArrowRightBackward = (canvas: HTMLCanvasElement) => {
         ctx.fillStyle = 'black';
         ctx.fill();
 
-        // drawArrowLeftForward(canvas);
-        // drawArrowLeftBackward(canvas);
-        // drawArrowRightForward(canvas);
-        // drawArrowRightBackward(canvas);
     }

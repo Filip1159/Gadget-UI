@@ -1,19 +1,19 @@
-import { Component, EventEmitter, Input, OnDestroy, Output } from '@angular/core'
-import { Subscription, timer } from 'rxjs'
+import { Component, input, OnDestroy, output } from '@angular/core'
+import { interval, Subscription } from 'rxjs'
 
 @Component({
     selector: 'longpress-button',
     templateUrl: './longpress-button.html',
 })
 export class LongPressButton implements OnDestroy {
-    @Input() intervalMs = 500
-    @Input() disabled = false
-    @Input() label?: string
+    intervalMs = input(500)
+    disabled = input(false)
+    label = input<string>()
 
     /** Emitted immediately on press and then every `intervalMs` while held. */
-    @Output() press = new EventEmitter<void>()
+    press = output<void>()
     /** Emitted once when a press that was started ends (release, cancel, leave, destroy). */
-    @Output() release = new EventEmitter<void>()
+    release = output<void>()
 
     private subscription?: Subscription
 
@@ -22,7 +22,8 @@ export class LongPressButton implements OnDestroy {
             return // already pressed; ignore a second pointer/duplicate start
         }
         event?.preventDefault()
-        this.subscription = timer(0, this.intervalMs).subscribe(() => this.press.emit())
+        this.press.emit() // immediately, not on the next tick, so even a very quick tap sends its command
+        this.subscription = interval(this.intervalMs()).subscribe(() => this.press.emit())
     }
 
     onPressEnd(): void {
