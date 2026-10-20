@@ -3,6 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
 import { FormsModule } from '@angular/forms'
 import { SocketService } from '../../../socket.service'
 import { DriveDirection } from '../../../protocol'
+import { DEFAULT_PID, DEFAULT_SPEED } from '../../../config'
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome'
 import { faAngleUp, faArrowsToCircle } from '@fortawesome/free-solid-svg-icons'
 import { LongPressButton } from './../longpress-button/longpress-button'
@@ -28,10 +29,10 @@ export class Steering implements OnInit, OnDestroy {
 
     connected = computed(() => this.socket.status() === 'open')
 
-    speed = signal(1000)
-    P = signal(0.15)
-    I = signal(0.05)
-    D = signal(0.00)
+    speed = signal(DEFAULT_SPEED)
+    P = signal(DEFAULT_PID.P)
+    I = signal(DEFAULT_PID.I)
+    D = signal(DEFAULT_PID.D)
 
     constructor() {
         // The robot's actual settings win over the defaults above.

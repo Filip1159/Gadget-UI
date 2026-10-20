@@ -6,7 +6,7 @@
   },
   "newProjectRoot": "projects",
   "projects": {
-    "exploring-robot": {
+    "gadget-ui": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -61,10 +61,10 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "exploring-robot:build:production"
+              "buildTarget": "gadget-ui:build:production"
             },
             "development": {
-              "buildTarget": "exploring-robot:build:development"
+              "buildTarget": "gadget-ui:build:development"
             }
           },
           "defaultConfiguration": "development"

@@ -1,24 +1,37 @@
-# the-sneaky-spy
+# Gadget-UI
 
-Browser control panel for a 2-wheeled ESP32 robot: drive it with on-screen buttons or the keyboard, tune the wheel PID, and watch its 10 distance sensors on a live canvas.
+Browser control panel for [Gadget](https://github.com/Filip1159/Gadget-firmware), a small 2-wheeled exploring robot
 
-Angular 21 (zoneless, standalone components, signals). Talks to the robot over a plain-text WebSocket (`ws://<robot>:88`). The robot firmware lives in a separate repo: `PlatformIO/Projects/Arduino Nano ESP32 OTA test` (its `CLAUDE.md` has the authoritative wire format).
+## Features
 
-## Run
+- Drive with on-screen buttons or the keyboard, with adjustable speed
+- Tune the wheel PID gains live
+- Live view of Gadget's 10 distance sensors, drawn to scale around the robot on a canvas
+- Connection status, automatic reconnect and optional token auth
+- Angular 21 (zoneless, standalone components, signals), talking to the robot over a plain-text WebSocket (`ws://<robot>:88`)
+
+#
 
 ```bash
 npm install
-npm start        # dev server on http://localhost:4200
-npm test         # Vitest + jsdom
-npm run build
 ```
+
+```bash
+npm start        # dev server on http://localhost:4200
+```
+
+```bash
+npm test         # Vitest + jsdom
+```
+
+#
 
 Serve the app over plain `http://` (the dev server does): a page served over `https://` cannot open an insecure `ws://` connection.
 
 ## Connecting to the robot
 
 - Default address: `ws://192.168.1.16:88`.
-- If the robot is not reachable, a red banner at the top lets you type another address (for example `ws://robot.local:88`) and an optional token, then reconnect. The address and token are remembered in `localStorage` (`robotUrl`, `robotToken`).
+- If the robot is not reachable, a red banner at the top lets you type another address (for example `ws://gadget.local:88`) and an optional token, then reconnect. The address and token are remembered in `localStorage` (`robotUrl`, `robotToken`).
 - The token is only needed if the firmware was built with `WS_TOKEN`; it is sent as the first frame (`AUTH <token>`).
 - The app reconnects automatically (backoff 0.5s to 10s) and disables the direction pad while disconnected. STOP stays enabled.
 
@@ -34,20 +47,3 @@ Serve the app over plain `http://` (the dev server does): a page served over `ht
 | Start/Stop Measuring | Continuous 10-sensor sweeps, drawn as cones around the robot |
 
 The robot also stops by itself if no command arrives for 1 second or the connection drops.
-
-## Layout
-
-```
-src/
-  main.ts, app/                 bootstrap, root component, connection/error banners
-  protocol.ts                   typed wire protocol: commands, parsing of MEASURE / STATE / ERR frames
-  socket.service.ts             the only WebSocket: status, reconnect, auth, typed send(), parsed streams
-  components/
-    control-panel/              hosts steering + robot preview
-      steering/                 buttons, slider, PID form, keyboard (keyboard-steering.ts)
-      longpress-button/         repeating press + release output
-      slider/                   two-way (model) range input
-      robot-preview/            canvas renderer (drawing.ts) + container
-```
-
-More detail for contributors (and for AI assistants) is in `CLAUDE.md`; the open backlog is in `STATUS.MD`.

@@ -1,10 +1,10 @@
 import { Injectable, signal } from '@angular/core';
 import { Subject, filter, map, share } from 'rxjs';
+import { DEFAULT_ROBOT_URL } from './config';
 import { Command, RobotMessage, RobotState, Sweep, encodeCommand, parseMessage } from './protocol';
 
 export type SocketStatus = 'connecting' | 'open' | 'closed';
 
-const DEFAULT_ROBOT_URL = 'ws://192.168.1.16:88';
 const ROBOT_URL_STORAGE_KEY = 'robotUrl';
 const ROBOT_TOKEN_STORAGE_KEY = 'robotToken';
 const MIN_RECONNECT_MS = 500;
@@ -68,7 +68,7 @@ export class SocketService {
     });
   }
 
-  /** Robot address: `localStorage.robotUrl` overrides the default, e.g. `localStorage.robotUrl = 'ws://robot.local:88'`. */
+  /** Robot address: `localStorage.robotUrl` overrides the default, e.g. `localStorage.robotUrl = 'ws://gadget.local:88'`. */
   get url(): string {
     return localStorage.getItem(ROBOT_URL_STORAGE_KEY) ?? DEFAULT_ROBOT_URL;
   }

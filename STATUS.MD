@@ -1,4 +1,4 @@
-# the-sneaky-spy (Frontend) - Status / Backlog
+# Gadget-UI (Frontend) - Status / Backlog
 
 Working list for the frontend. `[x]` = implemented, `[ ]` = open.
 
@@ -23,7 +23,7 @@ All `[x]` items are implemented and verified (automated tests plus the robot).
 
 - [x] `connect()` was called from `RobotPreview`'s constructor. `App` now connects once; `connect()` is idempotent.
 - [x] No reconnect / status / `onerror`. `SocketService` has a `status` signal, reconnects with backoff (0.5s to 10s), handles `onerror`; a red banner shows while not connected.
-- [x] Hardcoded robot address. `localStorage.robotUrl` + an address field in the banner (validated `ws(s)://`, reconnects immediately; the old socket cannot trigger a reconnect to the old URL). [ ] The default `ws://192.168.1.16:88` is still a constant in `socket.service.ts` (no `environment.ts`/runtime config); `ws://` still only works from an `http://` page.
+- [x] Hardcoded robot address. `localStorage.robotUrl` + an address field in the banner (validated `ws(s)://`, reconnects immediately; the old socket cannot trigger a reconnect to the old URL). The default URL now lives in `src/config.ts`. [ ] It is still a build-time constant (no runtime `config.json`); `ws://` still only works from an `http://` page.
 - [x] UI state desynced from the robot (`isMeasuring`). The firmware sends a `STATE` frame on connect and the preview follows it; `isMeasuring` is a signal. **[cross-repo]**
 
 ### 1.3 Rendering
@@ -31,8 +31,8 @@ All `[x]` items are implemented and verified (automated tests plus the robot).
 - [x] A full repaint per frame. Frames are now one atomic sweep (**[cross-repo]** batched `MEASURE` frame) and repaints are coalesced into one `requestAnimationFrame`.
 - [x] Stale readings stayed on screen forever. The whole picture is cleared if no sweep arrives for 3s, on disconnect, and on stop measuring. (Per-sensor aging is moot now that a sweep is atomic.)
 - [x] `>= 1000` was drawn as a real 1000mm obstacle. The wire carries `OOR` and it is drawn as a dashed full-range outline. **[cross-repo]**
-- [x] HiDPI: the backing store is scaled by `devicePixelRatio`. [ ] Still a fixed 600x600 logical size: not responsive to the viewport/phone, and `600`/`300` literals remain in `drawing.ts`.
-- [ ] `drawDistance()` still paints a gray 300px max-range sector per sensor on every repaint (should be a static layer / drawn once), and `canvas.getContext('2d')!` is looked up in every draw call.
+- [x] HiDPI: the backing store is scaled by `devicePixelRatio`; the canvas is sized in CSS (`width: 100%`, max 600px) so it shrinks on narrow screens. [ ] The logical size is still 600px (no resize observer).
+- [x] The robot is drawn once into an offscreen layer and copied per frame, the 2D context is looked up once, and the redundant grey max-range sectors (same colour as the background, they only erased neighbouring cones) are gone.
 
 ### 1.4 Forms / input
 
@@ -46,8 +46,8 @@ All `[x]` items are implemented and verified (automated tests plus the robot).
 
 - [x] Stale `app.spec.ts` replaced by a render test of the whole app (fake `WebSocket`, fake canvas context): banner/disabled pad when offline, enabled pad + controls initialised from `STATE` when online, `STOP` on release, `ERR` banner. Plus specs for `protocol` (parse/encode), `SocketService` (not-open handling, reconnect backoff, auth-first, state/error streams, `setUrl`), `LongPressButton`, `KeyboardSteering`: 27 tests.
 - [x] README replaced (run, connect, controls, layout).
-- [ ] Naming mismatch: package/angular project is still `exploring-robot` (`package.json`, `angular.json`, output `dist/exploring-robot`) while the repo and header are "the-sneaky-spy". Renaming touches build config, so not done yet.
-- [ ] `provideRouter(routes)` is configured (`app.config.ts`) with no `<router-outlet>` and an empty `app.routes.ts`. Remove or use it.
+- [x] Renamed to Gadget-UI: package and Angular project `gadget-ui`, header and page title "Gadget". (The repo folder is still `the-sneaky-spy`.)
+- [x] Unused `provideRouter`/`app.routes.ts` removed.
 
 ---
 
@@ -59,8 +59,8 @@ All `[x]` items are implemented and verified (automated tests plus the robot).
 - [x] Unused code and imports (`DISTANCE_POSITIONS`, `drawArrow*`, commented blocks, duplicate key map, unused imports in `control-panel.ts`/`steering.ts`/`robot-preview.ts`/`app.ts`).
 - [x] Mixed Angular styles: `slider` is `model()`, `longpress-button` is `input()`/`output()`, `robot-preview` uses `viewChild()`/`afterNextRender`, `isMeasuring` is a signal, redundant `standalone: true` removed. (No legacy `@Input/@Output/@ViewChild` left.)
 - [x] No unsubscribe in `RobotPreview`; all subscriptions use `takeUntilDestroyed()` (or are cleaned in `ngOnDestroy`).
-- [ ] Inline styles and magic colours (`robot-preview.html` button styles, `#966/#986/#996/#575`, distance thresholds 100/200/300). Move to SCSS variables / a named threshold table.
-- [ ] Drawing code is a pile of coordinates (`X_OFFSET + TOTAL_WIDTH - ...`, hand-written chassis polygon). Compute sensor positions/angles and the polygon from a few robot-dimension constants (ideally in mm with one scale).
+- [x] Button styles are in `robot-preview.scss`; colour bands are the `RANGE_BANDS` table in `sensor-renderer.ts`.
+- [x] Robot geometry is in millimetres in `robot-geometry.ts` (chassis polygon, wheels and sensor mounts computed from the real dimensions), and `SensorRenderer` uses one px-per-mm scale.
 - [x] `Steering` mixed UI state, key mapping and protocol encoding. It now only translates UI events into typed commands; key logic is in `KeyboardSteering`.
 - [ ] `rxjs 7.8.0` / `tslib 2.3.0` are pinned to old minors; worth an `npm outdated` pass.
 
@@ -80,9 +80,9 @@ All `[x]` items are implemented and verified (automated tests plus the robot).
 ### 3.2 Architecture
 
 - [x] Typed protocol layer + `SocketService` owning the connection lifecycle with `status` signal and typed streams. (`toSignal()` in `RobotPreview` was not needed; it renders from a coalesced `requestAnimationFrame`.)
-- [ ] Split `RobotPreview` into a dumb canvas renderer (`draw(sweep)`) and a container; unit-test the renderer with a mock context (the app render test already mocks the context).
+- [x] `RobotPreview` is split: `SensorRenderer` draws (`render(sweep)`, unit-tested with a recording context, 10 new tests), the component handles state, scheduling and the measuring toggle.
 - [ ] Decide on a folder layout (`core/`, `features/`, `shared/`). `socket.service.ts`/`protocol.ts` sit in `src/` next to `main.ts` and components are in `src/components/`; `CLAUDE.md` now describes the real layout.
-- [ ] `environment.ts` or a runtime `config.json` for the default robot URL, speed range (`0-2000` is hardcoded in `slider.html`) and PID defaults.
+- [x] `src/config.ts` holds the default robot URL, speed range/step and the placeholder speed/PID. [ ] Not a runtime `config.json` yet.
 
 ### 3.3 Features worth considering
 

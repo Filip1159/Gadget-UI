@@ -1,4 +1,4 @@
-# the-sneaky-spy (Robot control frontend)
+# Gadget-UI (control frontend for the Gadget robot)
 
 Angular 21 (zoneless, standalone components, signals) single-page app that connects over a raw WebSocket to a companion ESP32 robot firmware (separate repo: `PlatformIO/Projects/Arduino Nano ESP32 OTA test`, see its `CLAUDE.md`) to drive it and visualize its 10 distance sensors in real time on a `<canvas>`.
 
@@ -18,6 +18,7 @@ Angular 21 (zoneless, standalone components, signals) single-page app that conne
 ```
 src/
   main.ts, app/                    bootstrap; App connects the socket and shows the connection/error banners
+  config.ts                        defaults: robot URL, speed range/step, placeholder speed + PID
   protocol.ts                      typed wire protocol: Command + encodeCommand, parseMessage (MEASURE / STATE / ERR), direction types
   socket.service.ts                singleton WebSocket wrapper (root-provided)
   components/
@@ -27,12 +28,12 @@ src/
       steering/                    direction pad, speed slider, PID form; keyboard-steering.ts is the framework-free keyboard logic
       longpress-button/            emits `press` immediately and every 500ms while held, `release` once at the end
       slider/                      numeric slider with a `model()` value (two-way bindable)
-      robot-preview/               canvas visualization (drawing.ts = pure drawing code) + sensor cones
+      robot-preview/               canvas visualization: robot-geometry.ts (robot in mm), sensor-renderer.ts (drawing), robot-preview.ts (container)
 ```
 
 `SocketService` is the **only** WebSocket in the app. It is connected once by `App`. It provides:
 - `status` signal (`connecting | open | closed`), automatic reconnect with exponential backoff (0.5s to 10s), `onerror` handling.
-- `url` / `setUrl()` and `token` / `setToken()`, persisted in `localStorage` (`robotUrl`, `robotToken`; default `ws://192.168.1.16:88`). If a token is set it is sent as the very first frame (`AUTH <token>`) on every (re)connect.
+- `url` / `setUrl()` and `token` / `setToken()`, persisted in `localStorage` (`robotUrl`, `robotToken`; default `ws://192.168.1.16:88` in `src/config.ts`). If a token is set it is sent as the very first frame (`AUTH <token>`) on every (re)connect.
 - `send(command: Command): boolean` - typed; returns `false` (and warns) when the socket is not open, never throws.
 - Parsed streams, all fed from one validated parse (`robot$` is `share()`d): `sweeps$` (one full sensor sweep per frame), `state$` (robot settings after connect), `errors$` (robot rejections, also surfaced as `lastError`, auto-cleared after 4s). Unrecognised/malformed frames are logged once and dropped. `messages$` is the raw text stream; prefer the parsed ones.
 
@@ -57,8 +58,8 @@ See the firmware repo's `CLAUDE.md` for the authoritative wire format; mirrored 
 ## Robot preview rendering (`robot-preview/`)
 
 - `RobotPreview` keeps the latest `Sweep` (direction -> mm | null) and a timestamp. Frames are coalesced: each sweep schedules a single `requestAnimationFrame` repaint. Readings are cleared if no sweep arrives for 3s, on disconnect, and when measuring is stopped.
-- `redrawCanvas()` is a full imperative repaint: `drawAll(canvas)` (background + chassis + wheels) then `drawDistance(distance, direction, canvas)` per sensor. `drawing.ts` is pure canvas code with `DIRECTION_CONFIG` (`{x, y, angle}` per sensor) and colour bands: red <100mm, orange <200mm, yellow <300mm, green >= 300mm; `null` (OOR) is a dashed full-range outline.
-- The canvas is HiDPI-aware: its backing store is scaled by `devicePixelRatio` in `initCanvas()` (run via `afterNextRender`), while all drawing code stays in 600x600 logical pixels.
+- The robot is described once in millimetres in `robot-geometry.ts` (135x180 body, 18mm chamfer edges, 80x16 wheels centred on the sides, sensor mounts and angles; origin at the centre, front = -y). `SensorRenderer` (`sensor-renderer.ts`) maps that to canvas pixels (`VIEW_RANGE_MM` = 600mm from the centre to the canvas edge), draws the robot once into an offscreen layer and copies it each frame, then draws one cone per sensor. Colour bands live in `RANGE_BANDS` (red <100mm, orange <200mm, yellow <300mm, green above); readings are clamped to `MAX_RANGE_MM`; `null` (OOR) is a dashed full-range outline. `RobotPreview.redrawCanvas()` just calls `renderer.render(sweep)`.
+- The canvas is HiDPI-aware: `SensorRenderer` sizes the backing store to `size * devicePixelRatio` and draws in logical pixels. The logical size is 600px; CSS (`robot-preview.scss`) scales it down on narrow screens (`width: 100%`, `aspect-ratio: 1`).
 
 ## Known gotchas / fragile areas
 

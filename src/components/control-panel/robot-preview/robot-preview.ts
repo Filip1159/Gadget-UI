@@ -1,11 +1,13 @@
 import { afterNextRender, Component, ElementRef, effect, inject, signal, viewChild } from "@angular/core";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { interval } from "rxjs";
-import { drawAll, drawDistance } from "./drawing";
+import { SensorRenderer } from "./sensor-renderer";
 import { Command, Sweep } from "../../../protocol";
 import { SocketService } from "../../../socket.service";
 
 const STALE_AFTER_MS = 3000;
+// Logical canvas size; CSS scales it down on narrow screens.
+const CANVAS_SIZE_PX = 600;
 
 @Component({
     selector: "robot-preview",
@@ -20,6 +22,7 @@ export class RobotPreview {
     private distances: Sweep = new Map();
     private lastSweepAt = 0;
     private redrawScheduled = false;
+    private renderer?: SensorRenderer;
 
     constructor() {
         this.socket.sweeps$.pipe(takeUntilDestroyed()).subscribe(sweep => {
@@ -42,7 +45,8 @@ export class RobotPreview {
         afterNextRender(() => {
             const canvas = this.canvas()?.nativeElement;
             if (canvas) {
-                this.initCanvas(canvas);
+                this.renderer = new SensorRenderer(canvas, CANVAS_SIZE_PX, window.devicePixelRatio || 1);
+                this.renderer.render(this.distances);
             }
         });
 
@@ -55,18 +59,6 @@ export class RobotPreview {
     }
 
     private canvas = viewChild<ElementRef<HTMLCanvasElement>>('canvas')
-
-    private initCanvas(canvas: HTMLCanvasElement) {
-        // Back the canvas with device pixels but keep drawing in 600x600 CSS-pixel coordinates.
-        const dpr = window.devicePixelRatio || 1;
-        const size = canvas.width;
-        canvas.style.width = `${size}px`;
-        canvas.style.height = `${canvas.height}px`;
-        canvas.width = size * dpr;
-        canvas.height = canvas.height * dpr;
-        canvas.getContext('2d')!.setTransform(dpr, 0, 0, dpr, 0, 0);
-        drawAll(canvas);
-    }
 
     toggleMeasurement() {
         const command: Command = { type: this.isMeasuring() ? 'measureStop' : 'measureStart' };
@@ -97,11 +89,6 @@ export class RobotPreview {
     }
 
     private redrawCanvas() {
-        const canvas = this.canvas()?.nativeElement;
-        if (!canvas) {
-            return;
-        }
-        drawAll(canvas);
-        this.distances.forEach((distance, direction) => drawDistance(distance, direction, canvas));
+        this.renderer?.render(this.distances);
     }
 }
