@@ -1,13 +1,14 @@
-import { Component, effect, ElementRef, HostListener, inject, OnInit, OnDestroy, signal, ViewChild } from '@angular/core'
+import { Component, computed, inject, OnInit, OnDestroy, signal } from '@angular/core'
 import { FormsModule } from '@angular/forms'
 import { SocketService } from '../../../socket.service'
+import { DriveDirection } from '../../../protocol'
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome'
 import { faAngleUp, faArrowsToCircle, faLightbulb } from '@fortawesome/free-solid-svg-icons'
 import { LongPressButton } from './../longpress-button/longpress-button'
 import { Slider } from './../slider/slider'
 import { Subject, Subscription, throttleTime } from 'rxjs'
 
-const KEY_TO_DIRECTION = {
+const KEY_TO_DIRECTION: Record<string, DriveDirection> = {
     'w': 'FORWARD',
     'q': 'FORWARD_LEFT',
     'e': 'FORWARD_RIGHT',
@@ -34,33 +35,48 @@ export class Steering implements OnInit, OnDestroy {
 
     private keydown = new Subject<Event>();
     private sub!: Subscription;
+    private speed$ = new Subject<number>();
+    private speedSub!: Subscription;
+
+    connected = computed(() => this.socket.status() === 'open')
 
     P = signal(0.15)
     I = signal(0.05)
     D = signal(0.00)
 
     ngOnInit(): void {
+        // Slider fires an input event per step while dragging; send at most one per 100ms, keeping the final value.
+        this.speedSub = this.speed$
+            .pipe(throttleTime(100, undefined, { leading: true, trailing: true }))
+            .subscribe(value => this.socket.send({ type: 'speed', value }))
+
         this.sub = this.keydown
         .pipe(throttleTime(500))
         .subscribe(event => {
             const keyboardEvent = event as KeyboardEvent
-            const direction = KEY_TO_DIRECTION[keyboardEvent.key.toLowerCase() as keyof typeof KEY_TO_DIRECTION]
+            const direction = KEY_TO_DIRECTION[keyboardEvent.key.toLowerCase()]
             if (direction) {
-                this.socket.send(direction)
+                this.socket.send({ type: 'drive', direction })
             }
         });
     }
 
-    move(msg: string): void {
-        this.socket.send(msg)
+    move(direction: DriveDirection): void {
+        this.socket.send({ type: 'drive', direction })
     }
 
-    setSpeed(msg: number): void {
-        this.socket.send(`SPEED ${msg}`)
+    setSpeed(speed: number): void {
+        this.speed$.next(speed)
     }
+
+    // ngModel gives null for an empty number input; never send that to the robot.
+    pidValid = computed(() => [this.P(), this.I(), this.D()].every(v => typeof v === 'number' && Number.isFinite(v) && v >= 0))
 
     setPid() {
-        this.socket.send(`PID ${this.P()} ${this.I()} ${this.D()}`)
+        if (!this.pidValid()) {
+            return
+        }
+        this.socket.send({ type: 'pid', p: this.P(), i: this.I(), d: this.D() })
     }
 
     // @HostListener('window:keydown', ['$event'])
@@ -70,5 +86,6 @@ export class Steering implements OnInit, OnDestroy {
 
     ngOnDestroy(): void {
         this.sub.unsubscribe();
+        this.speedSub.unsubscribe();
     }
 }

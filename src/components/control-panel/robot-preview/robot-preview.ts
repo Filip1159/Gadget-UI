@@ -1,7 +1,11 @@
-import { Component, ElementRef, inject, HostListener, OnInit, ViewChild, ChangeDetectorRef } from "@angular/core";
+import { Component, ElementRef, effect, inject, OnInit, signal, ViewChild } from "@angular/core";
+import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
+import { interval } from "rxjs";
 import { drawAll, drawDistance } from "./drawing";
+import { Command, Sweep } from "../../../protocol";
 import { SocketService } from "../../../socket.service";
-import { Subscription, interval } from 'rxjs';
+
+const STALE_AFTER_MS = 3000;
 
 @Component({
     selector: "robot-preview",
@@ -11,26 +15,38 @@ import { Subscription, interval } from 'rxjs';
 export class RobotPreview implements OnInit {
 
     private socket = inject(SocketService)
-    private cdr = inject(ChangeDetectorRef)
-    public isMeasuring = false;
-    private distances: Map<string, number> = new Map();
+    public isMeasuring = signal(false);
+    // null = out of range (no obstacle detected)
+    private distances: Sweep = new Map();
+    private lastSweepAt = 0;
+    private redrawScheduled = false;
 
     constructor() {
-        this.socket.connect()
-        this.socket.messages$.subscribe((msg: string) => {
-            console.log('From ESP32:', msg);
-            if (msg.startsWith('MEASURE ')) {
-                const [_, direction, distanceStr] = msg.split(" ")
-                const distance = parseInt(distanceStr, 10);
-                if (!direction || Number.isNaN(distance)) {
-                    console.error('Malformed MEASURE message, ignoring:', msg);
-                    return;
-                }
-                console.log('Setting distance:', direction, distance);
-                this.distances.set(direction, distance);
-                console.log('Map size:', this.distances.size);
-                console.log('Calling redrawCanvas...');
-                this.redrawCanvas();
+        this.socket.robot$.pipe(takeUntilDestroyed()).subscribe(message => {
+            // A frame is one atomic sweep: replace the whole picture.
+            this.distances = message.sweep;
+            this.lastSweepAt = Date.now();
+            this.scheduleRedraw();
+        });
+
+        this.socket.opened$.pipe(takeUntilDestroyed()).subscribe(() => {
+            // The robot keeps its continuous-measurement flag across page reloads/reconnects,
+            // so bring both sides back to a known state.
+            this.isMeasuring.set(false);
+            this.socket.send({ type: 'measureStop' });
+        });
+
+        // Drop readings that stopped arriving instead of showing them as current.
+        interval(500).pipe(takeUntilDestroyed()).subscribe(() => {
+            if (this.distances.size > 0 && Date.now() - this.lastSweepAt > STALE_AFTER_MS) {
+                this.clearDistances();
+            }
+        });
+
+        effect(() => {
+            if (this.socket.status() === 'closed') {
+                this.isMeasuring.set(false);
+                this.clearDistances();
             }
         });
     }
@@ -38,36 +54,52 @@ export class RobotPreview implements OnInit {
     @ViewChild('canvas', { static: true }) canvas!: ElementRef<HTMLCanvasElement>
 
     ngOnInit() {
-        console.log('ngOnInit - canvas element:', this.canvas?.nativeElement);
-        drawAll(this.canvas.nativeElement);
+        const canvas = this.canvas.nativeElement;
+        // Back the canvas with device pixels but keep drawing in 600x600 CSS-pixel coordinates.
+        const dpr = window.devicePixelRatio || 1;
+        const size = canvas.width;
+        canvas.style.width = `${size}px`;
+        canvas.style.height = `${canvas.height}px`;
+        canvas.width = size * dpr;
+        canvas.height = canvas.height * dpr;
+        canvas.getContext('2d')!.setTransform(dpr, 0, 0, dpr, 0, 0);
+        drawAll(canvas);
     }
 
     toggleMeasurement() {
-        this.isMeasuring = !this.isMeasuring;
-        if (this.isMeasuring) {
-            this.socket.send('MEASURE_START');
-        } else {
-            this.socket.send('MEASURE_STOP');
+        const command: Command = { type: this.isMeasuring() ? 'measureStop' : 'measureStart' };
+        if (!this.socket.send(command)) {
+            return;
+        }
+        this.isMeasuring.update(v => !v);
+        if (!this.isMeasuring()) {
+            this.clearDistances();
         }
     }
 
-    private redrawCanvas() {
-        if (!this.canvas?.nativeElement) {
-            console.error('Canvas not available!');
+    private clearDistances() {
+        this.distances.clear();
+        this.scheduleRedraw();
+    }
+
+    /** Coalesces the 10 frames of a sweep into a single repaint. */
+    private scheduleRedraw() {
+        if (this.redrawScheduled) {
             return;
         }
-
-        console.log('Redrawing canvas with', this.distances.size, 'measurements');
-
-        // Clear and redraw everything
-        drawAll(this.canvas.nativeElement);
-
-        // Redraw all stored distances
-        this.distances.forEach((distance, direction) => {
-            console.log('Drawing:', direction, distance);
-            drawDistance(distance, direction, this.canvas.nativeElement);
+        this.redrawScheduled = true;
+        requestAnimationFrame(() => {
+            this.redrawScheduled = false;
+            this.redrawCanvas();
         });
+    }
 
-        console.log('Redraw complete');
+    private redrawCanvas() {
+        const canvas = this.canvas?.nativeElement;
+        if (!canvas) {
+            return;
+        }
+        drawAll(canvas);
+        this.distances.forEach((distance, direction) => drawDistance(distance, direction, canvas));
     }
 }

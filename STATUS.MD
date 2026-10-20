@@ -15,6 +15,51 @@ Companion list for the firmware: `C:\Users\fwisn\Documents\PlatformIO\Projects\A
 
 Still open in 1.1: keyboard throttle/keyup design (only relevant once the handler is re-enabled) and the 500ms repeat vs. firmware.
 
+
+## Resolved, round 2 (`ng build` verified, not tested in a browser)
+
+- 1.2 `SocketService` owns the connection: `App` calls `connect()` (idempotent), not `RobotPreview`.
+- 1.2 reconnect with exponential backoff (0.5s to 10s), `status` signal (`connecting|open|closed`), `onerror` handled, red banner in `app.html` while not connected.
+- 1.2 robot URL: `localStorage.robotUrl` overrides the default `ws://192.168.1.16:88`.
+- 1.2 UI desync: on every (re)connect the preview resets `isMeasuring` and sends `MEASURE_STOP`; `isMeasuring` is now a signal.
+- 1.3 repaint coalesced to one `requestAnimationFrame` per burst of frames; stale cones cleared on disconnect and on stop measuring.
+- Hot-path `console.log`s removed from the socket service and preview; `messages$` subscription uses `takeUntilDestroyed`.
+
+Not done (still open): the banner does not disable the control buttons; out-of-range rendering, HiDPI canvas, per-sensor staleness aging, hardcoded-IP UI field.
+
+
+## Resolved, round 3 (`ng build` verified, not tested in a browser)
+
+- 1.4 slider `SPEED` messages throttled to one per 100ms (leading + trailing, so the final value always goes out).
+- 1.4 PID: values validated (finite, >= 0) before sending, Set PID disabled otherwise; button is `type="button"`; labels now match input ids.
+- 1.4 icon buttons have `aria-label`s.
+- Direction buttons are disabled while the socket is not open (STOP stays enabled).
+- 1.3 canvas is HiDPI-aware (backing store scaled by `devicePixelRatio`, drawing code unchanged).
+
+Not done: out-of-range rendering (cross-repo), per-sensor staleness aging, keyboard handler redesign, typed protocol layer, tests.
+
+
+
+## Resolved, round 4 (`ng build` + `ng test` verified, not tested against the robot) [cross-repo]
+
+- Batched frame: `parseSweep()` (`drawing.ts`) parses `MEASURE DIR=mm|OOR ...` atomically; a malformed frame or unknown sensor drops the whole frame, a valid one replaces the whole map.
+- `OOR` is drawn as a dashed full-range outline instead of a fake 1000mm cone.
+- Stale readings: the preview clears itself if no sweep arrives for 3s (plus the existing clear on disconnect / stop).
+- Tests: removed the stale `app.spec.ts`, added `drawing.spec.ts` (3 parser tests, passing).
+- `CLAUDE.md` protocol section updated. The old firmware frame format is no longer supported.
+
+Not done: per-sensor (rather than whole-sweep) staleness, typed protocol layer, keyboard handler redesign, tests for `LongPressButton`/`SocketService`.
+
+
+
+## Resolved, round 5 (`ng build` + `ng test` verified, 12 tests passing)
+
+- Typed protocol layer: `src/protocol.ts` (`DriveDirection`, `SensorDirection`, `Command`, `encodeCommand`, `parseMessage`). `SocketService.send()` now takes a typed `Command`; `SocketService.robot$` emits only validated frames. Components no longer build or parse raw strings, and a typo in a direction is a compile error.
+- Tests added: protocol (parser + encoder), `SocketService` (not-open handling, status, idempotent connect, backoff reconnect, frame filtering), `LongPressButton` (single press/release, no leaked timer on double start, destroy).
+
+Not done: keyboard handler redesign (still commented out), per-sensor staleness, an `OnPush`/signals-input migration of the legacy `@Input/@Output` components, ESLint, robot-address UI field.
+
+
 ---
 
 ## 1. Bugs

@@ -25,7 +25,8 @@ app/
         ├── longpress-button/       emits `press` repeatedly while held (used for continuous direction commands)
         ├── slider/                 generic numeric slider, two-way-bindable via @Input/@Output
         └── robot-preview/          canvas visualization of the robot + live sensor cones
-src/socket.service.ts                singleton WebSocket wrapper (root-provided)
+src/socket.service.ts                singleton WebSocket wrapper (root-provided): status signal, reconnect, typed send(), robot$ stream
+src/protocol.ts                      typed wire protocol: Command/encodeCommand, parseMessage, direction types
 ```
 
 `SocketService` (`src/socket.service.ts`) is the **only** WebSocket connection in the app — a root-provided singleton holding one `WebSocket` and one RxJS `Subject<string>` (`messages$`) that every incoming text frame is pushed onto, unparsed. `connect()` currently hardcodes `ws://192.168.1.16:88` — update this if the robot's IP changes (no env-based config exists yet). `send(message: string)` writes raw strings directly to the socket, no outgoing queue/backpressure.
@@ -43,7 +44,7 @@ See the firmware repo's `CLAUDE.md` for the authoritative wire format; mirrored 
 - `MEASURE_START` / `MEASURE_STOP` — from the "Start/Stop Measuring" toggle button in `RobotPreview` (`toggleMeasurement()`), enables/disables the robot's continuous 200ms sensor-sweep broadcast.
 
 **Incoming (robot → this app)**, handled only in `RobotPreview`'s constructor subscription to `messages$`:
-- `MEASURE <DIRECTION> <uint16>` — one frame per sensor (10 per sweep). Parsed via `msg.split(" ")`; `direction` must match a key in `DIRECTION_CONFIG` (`drawing.ts`) and `distance` must parse to a non-NaN int, or the frame is dropped (validated defensively — malformed frames are logged and ignored rather than allowed to corrupt render state).
+- `MEASURE <DIRECTION>=<mm|OOR> ...` � one frame per sweep containing all 10 sensors, e.g. `MEASURE FRONT=412 FRONT_LEFT_45=OOR ...` (`OOR` = out of range, drawn as a dashed outline). Parsed by `parseSweep()` in `drawing.ts`; the whole frame is dropped if any token is malformed or names an unknown sensor, and a valid frame replaces the entire distance map. Readings are cleared if no sweep arrives for 3s, on disconnect, and when measuring is stopped.
 
 ## Robot preview rendering (`robot-preview/`)
 

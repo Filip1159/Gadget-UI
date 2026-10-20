@@ -7,6 +7,8 @@ import { Subscription, timer } from 'rxjs'
 })
 export class LongPressButton implements OnDestroy {
     @Input() intervalMs = 500
+    @Input() disabled = false
+    @Input() label?: string
 
     /** Emitted immediately on press and then every `intervalMs` while held. */
     @Output() press = new EventEmitter<void>()

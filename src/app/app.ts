@@ -1,4 +1,5 @@
-import { Component, signal } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { SocketService } from '../socket.service';
 import { ControlPanel } from "./../components/control-panel/control-panel";
 import { Header } from "./../components/header/header"
 
@@ -9,4 +10,9 @@ import { Header } from "./../components/header/header"
   styleUrl: './app.scss'
 })
 export class App {
+  protected socket = inject(SocketService);
+
+  constructor() {
+    this.socket.connect();
+  }
 }

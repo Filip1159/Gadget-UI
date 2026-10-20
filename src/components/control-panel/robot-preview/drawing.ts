@@ -1,3 +1,5 @@
+import { SensorDirection } from '../../../protocol'
+
 const X_CENTER = 300
 const Y_CENTER = 300
 
@@ -12,6 +14,7 @@ const WHEEL_WIDTH = 16
 const WHEEL_LENGTH = 45
 
 const PX_PER_MM = 0.5
+const MAX_RANGE_PX = 300
 
 const DISTANCE_SENSOR_BEAM_ANGLE = 25 / 180 * Math.PI
 
@@ -28,7 +31,7 @@ const DISTANCE_POSITIONS = {
     'BACK_RIGHT': { x: 510, y: 430 },
 }
 
-const DIRECTION_CONFIG = {
+const DIRECTION_CONFIG: Record<SensorDirection, { x: number, y: number, angle: number }> = {
     'FRONT': { x: X_CENTER, y: Y_OFFSET, angle: 1.5 * Math.PI },
     'FRONT_LEFT_45': { x: X_OFFSET + CORNER_CUT_WIDTH / 2, y: Y_OFFSET + CORNER_CUT_WIDTH / 2, angle: 1.25 * Math.PI },
     'FRONT_LEFT': { x: X_OFFSET, y: Y_OFFSET + (TOTAL_LENGTH - WHEEL_CUT_LENGTH) / 2, angle: Math.PI },
@@ -41,7 +44,7 @@ const DIRECTION_CONFIG = {
     'BACK_RIGHT': { x: X_OFFSET + TOTAL_WIDTH, y: Y_OFFSET + (TOTAL_LENGTH + WHEEL_CUT_LENGTH) / 2, angle: 0 }
 }
 
-export const drawDistance = (distance: number, direction: string, canvas: HTMLCanvasElement) => {
+export const drawDistance = (distance: number | null, direction: SensorDirection, canvas: HTMLCanvasElement) => {
     const ctx = canvas.getContext('2d')!
     // const position = DISTANCE_POSITIONS[direction as keyof typeof DISTANCE_POSITIONS];
     // ctx.fillStyle = 'gray';
@@ -52,7 +55,7 @@ export const drawDistance = (distance: number, direction: string, canvas: HTMLCa
     // const distanceString = distance >= 1000 ? '?' : distance.toString()
     // ctx.fillText(distanceString, position.x, position.y);
     // ctx.fill();
-    const config = DIRECTION_CONFIG[direction as keyof typeof DIRECTION_CONFIG];
+    const config = DIRECTION_CONFIG[direction];
 
     if (!config) {
         console.error('Invalid direction:', direction, 'Available directions:', Object.keys(DIRECTION_CONFIG));
@@ -61,9 +64,21 @@ export const drawDistance = (distance: number, direction: string, canvas: HTMLCa
 
     ctx.fillStyle = 'gray'
     ctx.beginPath()
-    ctx.arc(config.x, config.y, 300, config.angle - DISTANCE_SENSOR_BEAM_ANGLE / 2, config.angle + DISTANCE_SENSOR_BEAM_ANGLE / 2)
+    ctx.arc(config.x, config.y, MAX_RANGE_PX, config.angle - DISTANCE_SENSOR_BEAM_ANGLE / 2, config.angle + DISTANCE_SENSOR_BEAM_ANGLE / 2)
     ctx.lineTo(config.x, config.y)
     ctx.fill()
+
+    if (distance === null) {
+        // Nothing detected within range: dashed full-length outline, no filled cone.
+        ctx.strokeStyle = 'green'
+        ctx.lineWidth = 2
+        ctx.setLineDash([6, 6])
+        ctx.beginPath()
+        ctx.arc(config.x, config.y, MAX_RANGE_PX, config.angle - DISTANCE_SENSOR_BEAM_ANGLE / 2, config.angle + DISTANCE_SENSOR_BEAM_ANGLE / 2)
+        ctx.stroke()
+        ctx.setLineDash([])
+        return
+    }
 
     if (distance < 100) {
         ctx.strokeStyle = 'red'

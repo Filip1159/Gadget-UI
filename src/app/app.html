@@ -1,4 +1,9 @@
 <app-header></app-header>
+@if (socket.status() !== 'open') {
+    <div class="connection-banner">
+        {{ socket.status() === 'connecting' ? 'Connecting to' : 'Disconnected from' }} robot ({{ socket.url }})...
+    </div>
+}
 <div class="container">
     <control-panel></control-panel>
 </div>
