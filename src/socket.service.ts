@@ -4,11 +4,11 @@ import { Subject } from 'rxjs';
 @Injectable({ providedIn: 'root' })
 export class SocketService {
 
-  private socket!: WebSocket;
+  private socket?: WebSocket;
   public messages$ = new Subject<string>();
 
   connect() {
-    this.socket = new WebSocket('ws://10.102.193.162:88');
+    this.socket = new WebSocket('ws://192.168.1.16:88');
 
     this.socket.onmessage = (event) => {
       console.log('MSG:', event.data);
@@ -19,7 +19,13 @@ export class SocketService {
     this.socket.onclose = () => console.log('Disconnected');
   }
 
-  send(message: string) {
-    this.socket.send(message)
+  /** Returns false (and drops the message) if the socket is not open. */
+  send(message: string): boolean {
+    if (this.socket?.readyState !== WebSocket.OPEN) {
+      console.warn('Socket not open, dropping message:', message);
+      return false;
+    }
+    this.socket.send(message);
+    return true;
   }
 }

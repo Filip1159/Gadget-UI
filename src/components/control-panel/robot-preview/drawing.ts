@@ -54,6 +54,11 @@ export const drawDistance = (distance: number, direction: string, canvas: HTMLCa
     // ctx.fill();
     const config = DIRECTION_CONFIG[direction as keyof typeof DIRECTION_CONFIG];
 
+    if (!config) {
+        console.error('Invalid direction:', direction, 'Available directions:', Object.keys(DIRECTION_CONFIG));
+        return;
+    }
+
     ctx.fillStyle = 'gray'
     ctx.beginPath()
     ctx.arc(config.x, config.y, 300, config.angle - DISTANCE_SENSOR_BEAM_ANGLE / 2, config.angle + DISTANCE_SENSOR_BEAM_ANGLE / 2)

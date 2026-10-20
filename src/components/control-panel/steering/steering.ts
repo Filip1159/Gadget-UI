@@ -12,7 +12,7 @@ const KEY_TO_DIRECTION = {
     'q': 'FORWARD_LEFT',
     'e': 'FORWARD_RIGHT',
     'a': 'LEFT',
-    's': 'BRAKE',
+    's': 'STOP',
     'd': 'RIGHT',
     'x': 'BACKWARD',
     'z': 'BACKWARD_LEFT',
@@ -44,7 +44,10 @@ export class Steering implements OnInit, OnDestroy {
         .pipe(throttleTime(500))
         .subscribe(event => {
             const keyboardEvent = event as KeyboardEvent
-            this.socket.send(KEY_TO_DIRECTION[keyboardEvent.key as keyof typeof KEY_TO_DIRECTION])
+            const direction = KEY_TO_DIRECTION[keyboardEvent.key.toLowerCase() as keyof typeof KEY_TO_DIRECTION]
+            if (direction) {
+                this.socket.send(direction)
+            }
         });
     }
 

@@ -2,31 +2,31 @@
     <slider [value]="1000" (valueChange)="setSpeed($event)"></slider>
 
     <div class="steering__direction">
-        <longpress-button (press)="move('FORWARD_LEFT')">
+        <longpress-button (press)="move('FORWARD_LEFT')" (release)="move('STOP')">
             <fa-icon [icon]="faAngleUp" rotate="-45deg" size="3x" />
         </longpress-button>
-        <longpress-button (press)="move('FORWARD')">
+        <longpress-button (press)="move('FORWARD')" (release)="move('STOP')">
             <fa-icon [icon]="faAngleUp" size="3x" />
         </longpress-button>
-        <longpress-button (press)="move('FORWARD_RIGHT')">
+        <longpress-button (press)="move('FORWARD_RIGHT')" (release)="move('STOP')">
             <fa-icon [icon]="faAngleUp" rotate="45deg" size="3x" />
         </longpress-button>
-        <longpress-button (press)="move('LEFT')">
+        <longpress-button (press)="move('LEFT')" (release)="move('STOP')">
             <fa-icon [icon]="faAngleUp" rotate="-90deg" size="3x" />
         </longpress-button>
         <button class="button" (click)="move('STOP')">
             <fa-icon [icon]="faArrowsToCircle" size="2x" />
         </button>
-        <longpress-button (press)="move('RIGHT')">
+        <longpress-button (press)="move('RIGHT')" (release)="move('STOP')">
             <fa-icon [icon]="faAngleUp" rotate="90deg" size="3x" />
         </longpress-button>
-        <longpress-button (press)="move('BACKWARD_LEFT')">
+        <longpress-button (press)="move('BACKWARD_LEFT')" (release)="move('STOP')">
             <fa-icon [icon]="faAngleUp" rotate="225deg" size="3x" />
         </longpress-button>
-        <longpress-button (press)="move('BACKWARD')">
+        <longpress-button (press)="move('BACKWARD')" (release)="move('STOP')">
             <fa-icon [icon]="faAngleUp" rotate="180deg" size="3x" />
         </longpress-button>
-        <longpress-button (press)="move('BACKWARD_RIGHT')">
+        <longpress-button (press)="move('BACKWARD_RIGHT')" (release)="move('STOP')">
             <fa-icon [icon]="faAngleUp" rotate="135deg" size="3x" />
         </longpress-button>
     </div>

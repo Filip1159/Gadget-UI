@@ -1,6 +1,5 @@
 import { Component, EventEmitter, Input, OnDestroy, Output } from '@angular/core'
-import { Subject, Subscription, timer } from 'rxjs'
-import { takeUntil } from 'rxjs/operators'
+import { Subscription, timer } from 'rxjs'
 
 @Component({
     selector: 'longpress-button',
@@ -9,25 +8,28 @@ import { takeUntil } from 'rxjs/operators'
 export class LongPressButton implements OnDestroy {
     @Input() intervalMs = 500
 
+    /** Emitted immediately on press and then every `intervalMs` while held. */
     @Output() press = new EventEmitter<void>()
+    /** Emitted once when a press that was started ends (release, cancel, leave, destroy). */
+    @Output() release = new EventEmitter<void>()
 
-    private stop$ = new Subject<void>()
     private subscription?: Subscription
 
-    onPressStart(): void {
-        this.stop$ = new Subject<void>()
-
-        this.subscription = timer(0, this.intervalMs)
-            .pipe(takeUntil(this.stop$))
-            .subscribe(() => {
-                this.press.emit()
-            })
+    onPressStart(event?: PointerEvent): void {
+        if (this.subscription) {
+            return // already pressed; ignore a second pointer/duplicate start
+        }
+        event?.preventDefault()
+        this.subscription = timer(0, this.intervalMs).subscribe(() => this.press.emit())
     }
 
     onPressEnd(): void {
-        this.stop$.next()
-        this.stop$.complete()
-        this.subscription?.unsubscribe()
+        if (!this.subscription) {
+            return
+        }
+        this.subscription.unsubscribe()
+        this.subscription = undefined
+        this.release.emit()
     }
 
     ngOnDestroy(): void {

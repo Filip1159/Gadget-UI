@@ -1,3 +1,11 @@
 <div>
+    <div style="margin-bottom: 10px;">
+        <button
+            (click)="toggleMeasurement()"
+            [style.background-color]="isMeasuring ? '#4CAF50' : '#f44336'"
+            style="padding: 10px 20px; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;">
+            {{ isMeasuring ? 'Stop Measuring' : 'Start Measuring' }}
+        </button>
+    </div>
     <canvas #canvas width="600" height="600"></canvas>
 </div>

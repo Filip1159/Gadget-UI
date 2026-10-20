@@ -7,18 +7,6 @@ import { Steering } from './steering/steering'
 import { Subject, Subscription, throttleTime } from 'rxjs'
 import { RobotPreview } from "./robot-preview/robot-preview";
 
-const KEY_TO_DIRECTION = {
-    'w': 'FORWARD',
-    'q': 'FORWARD_LEFT',
-    'e': 'FORWARD_RIGHT',
-    'a': 'LEFT',
-    's': 'BRAKE',
-    'd': 'RIGHT',
-    'x': 'BACKWARD',
-    'z': 'BACKWARD_LEFT',
-    'c': 'BACKWARD_RIGHT'
-}
-
 @Component({
     selector: 'control-panel',
     standalone: true,
