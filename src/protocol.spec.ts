@@ -121,3 +121,9 @@ describe('encodeCommand', () => {
     expect(encodeCommand({ type: 'auth', token: 'abc' })).toBe('AUTH abc');
   });
 });
+
+describe('parseMessage STATE duplicates', () => {
+  it('rejects a STATE frame that repeats a key', () => {
+    expect(parseMessage('STATE SPEED=1 SPEED=2 P=1 I=1 D=1 MEASURING=0')).toBeUndefined();
+  });
+});

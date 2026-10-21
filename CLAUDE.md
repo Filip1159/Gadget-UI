@@ -19,7 +19,7 @@ Angular 21 (zoneless, standalone components, signals) single-page app that conne
 src/
   main.ts, app/                    bootstrap; App connects the socket and shows the connection/error banners
   config.ts                        defaults: robot URL, speed range/step, placeholder speed + PID
-  protocol.ts                      typed wire protocol: Command + encodeCommand, parseMessage (MEASURE / STATE / ERR), direction types
+  protocol.ts                      barrel for protocol/: types.ts (Command, RobotMessage, ...), encode.ts (encodeCommand), parse.ts (parseMessage), fields.ts (strict KEY=value helpers every parser is built on)
   socket.service.ts                singleton WebSocket wrapper (root-provided)
   components/
     header/                        presentational header
@@ -72,7 +72,7 @@ See the firmware repo's `CLAUDE.md` for the authoritative wire format; mirrored 
 
 ## Known gotchas / fragile areas
 
-- **Validate before touching shared render state.** `Subject` subscribers swallow exceptions (rethrown asynchronously), so a throw inside a subscriber looks like data silently stopping. All parsing is therefore done up front in `protocol.ts` and bad frames never reach `RobotPreview`; keep it that way when adding message types.
+- **Validate before touching shared render state.** `Subject` subscribers swallow exceptions (rethrown asynchronously), so a throw inside a subscriber looks like data silently stopping. All parsing is therefore done up front in `protocol/parse.ts` and bad frames never reach `RobotPreview`; keep it that way when adding message types.
 - **Everything the robot should do on its own is also enforced in firmware** (stop on disconnect, 1s command timeout), because browser tabs die. Do not rely on the UI alone to stop the robot.
 - `ws://` only works from an `http://` page (mixed-content rule). The token is sent in clear text.
 - `LongPressButton` emits `press` synchronously on pointer down (so even a very short tap sends its direction before the `STOP`), and guards against a second start while pressed; keep both properties if you touch it.
