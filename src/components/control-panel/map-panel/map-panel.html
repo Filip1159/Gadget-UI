@@ -1,0 +1,15 @@
+<section class="map-panel">
+  <div class="map-panel__toolbar">
+    <h2 class="map-panel__title">Map</h2>
+    <button type="button" (click)="recentre()">Recentre</button>
+    <button type="button" (click)="clearTrail()">Clear trail</button>
+  </div>
+  <canvas
+    #canvas
+    class="map-panel__canvas"
+    (pointerdown)="onPointerDown($event)"
+    (pointermove)="onPointerMove($event)"
+    (pointerup)="onPointerUp($event)"
+    (pointercancel)="onPointerUp($event)"
+    (wheel)="onWheel($event)"></canvas>
+</section>

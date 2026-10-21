@@ -1,0 +1,32 @@
+:host {
+  display: block;
+  flex: 0 1 600px;
+  min-width: 0;
+}
+
+.map-panel {
+  &__toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  &__title {
+    margin: 0 auto 0 0;
+    font-size: 18px;
+  }
+
+  &__canvas {
+    display: block;
+    width: 100%;
+    max-width: 600px;
+    aspect-ratio: 1;
+    cursor: grab;
+    touch-action: none;
+
+    &:active {
+      cursor: grabbing;
+    }
+  }
+}

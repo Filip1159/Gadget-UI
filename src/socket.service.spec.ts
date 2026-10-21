@@ -107,6 +107,27 @@ describe('SocketService', () => {
     expect(service.lastError()).toBeNull();
   });
 
+  it('pairs each MEASURE frame with the SWEEP_POSE frame before it on posedSweeps$', () => {
+    const received: { pose: unknown; front: number | null | undefined }[] = [];
+    service.posedSweeps$.subscribe(p => received.push({ pose: p.pose, front: p.sweep.get('FRONT') }));
+    service.connect();
+    const ws = FakeWebSocket.instances[0];
+    ws.onmessage?.({ data: 'SWEEP_POSE T0=1000 X0=0 Y0=0 TH0=0 T1=1390 X1=20 Y1=0 TH1=0' });
+    ws.onmessage?.({ data: 'POSE X=20 Y=0 TH=0 T=1400 Q=0' });
+    ws.onmessage?.({ data: 'MEASURE FRONT=400' });
+    ws.onmessage?.({ data: 'MEASURE FRONT=410' });
+    expect(received).toEqual([
+      {
+        pose: {
+          start: { xMm: 0, yMm: 0, theta: 0, tMs: 1000 },
+          end: { xMm: 20, yMm: 0, theta: 0, tMs: 1390 },
+        },
+        front: 400,
+      },
+      { pose: null, front: 410 },
+    ]);
+  });
+
   it('emits only valid robot frames on robot$', () => {
     const received: unknown[] = [];
     service.robot$.subscribe(m => received.push(m));

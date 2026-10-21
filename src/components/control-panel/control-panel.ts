@@ -5,10 +5,11 @@ import { Steering } from './steering/steering'
 import { RobotPreview } from "./robot-preview/robot-preview";
 import { SensorCalibration } from "./sensor-calibration/sensor-calibration";
 import { PoseDisplay } from "./pose-display/pose-display";
+import { MapPanel } from "./map-panel/map-panel";
 
 @Component({
     selector: 'control-panel',
-    imports: [FontAwesomeModule, FormsModule, Steering, RobotPreview, SensorCalibration, PoseDisplay],
+    imports: [FontAwesomeModule, FormsModule, Steering, RobotPreview, SensorCalibration, PoseDisplay, MapPanel],
     templateUrl: './control-panel.html',
     styleUrl: './control-panel.scss',
 })

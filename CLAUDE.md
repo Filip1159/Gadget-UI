@@ -31,13 +31,14 @@ src/
       pose-display/                  live odometry pose + reset button
       sensor-calibration/            sensor characterisation panel + CSV recorder (firmware MAPPING.MD item 0.4)
       robot-preview/               canvas visualization: robot-geometry.ts (robot in mm), sensor-renderer.ts (drawing), robot-preview.ts (container)
+      map-panel/                   top-down map in the odometry frame: map-view.ts (world<->canvas, pan, zoom), map-trail.ts (bounded path), map-renderer.ts, map-panel.ts (container)
 ```
 
 `SocketService` is the **only** WebSocket in the app. It is connected once by `App`. It provides:
 - `status` signal (`connecting | open | closed`), automatic reconnect with exponential backoff (0.5s to 10s), `onerror` handling.
 - `url` / `setUrl()` and `token` / `setToken()`, persisted in `localStorage` (`robotUrl`, `robotToken`; default `ws://192.168.1.16:88` in `src/config.ts`). If a token is set it is sent as the very first frame (`AUTH <token>`) on every (re)connect.
 - `send(command: Command): boolean` - typed; returns `false` (and warns) when the socket is not open, never throws.
-- Parsed streams, all fed from one validated parse (`robot$` is `share()`d): `sweeps$` (one full sensor sweep per frame), `state$` (robot settings after connect), `errors$` (robot rejections, also surfaced as `lastError`, auto-cleared after 4s). Unrecognised/malformed frames are logged once and dropped. `messages$` is the raw text stream; prefer the parsed ones.
+- Parsed streams, all fed from one validated parse (`robot$` is `share()`d): `sweeps$` (one full sensor sweep per frame), `posedSweeps$` (each sweep joined with the preceding `SWEEP_POSE`, `{ sweep, pose | null }`, via `SweepPairer` in `sweep-pairing.ts`; use this for mapping), `pose$`, `sweepPose$`, `state$` (robot settings after connect), `errors$` (robot rejections, also surfaced as `lastError`, auto-cleared after 4s). Unrecognised/malformed frames are logged once and dropped. `messages$` is the raw text stream; prefer the parsed ones.
 
 Components never build or parse wire strings themselves: they send `{ type: 'drive', direction }` etc. and subscribe to the parsed streams.
 

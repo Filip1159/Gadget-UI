@@ -1,6 +1,7 @@
 import { Injectable, signal } from '@angular/core';
-import { Subject, filter, map, share } from 'rxjs';
+import { Subject, defer, filter, finalize, map, share } from 'rxjs';
 import { DEFAULT_ROBOT_URL } from './config';
+import { SweepPairer, PosedSweep } from './sweep-pairing';
 import { Command, Pose, RobotMessage, RobotState, Sweep, SweepPose, encodeCommand, parseMessage } from './protocol';
 
 export type SocketStatus = 'connecting' | 'open' | 'closed';
@@ -39,6 +40,20 @@ export class SocketService {
     filter((m): m is Extract<RobotMessage, { type: 'measure' }> => m.type === 'measure'),
     map(m => m.sweep as Sweep),
   );
+
+  /**
+   * One complete sweep together with the pose at its start and end: each MEASURE frame is joined with the
+   * SWEEP_POSE frame sent right before it (`pose` is null if none came). Prefer this over `sweeps$` for mapping.
+   */
+  public posedSweeps$ = defer(() => {
+    const pairer = new SweepPairer(); // per subscriber, so subscribers never share pairing state
+    const reconnect = this.opened$.subscribe(() => pairer.reset());
+    return this.robot$.pipe(
+      map(message => pairer.push(message)),
+      filter((posed): posed is PosedSweep => posed !== undefined),
+      finalize(() => reconnect.unsubscribe()),
+    );
+  });
 
   /** Robot state, sent by the firmware right after (authenticated) connect. */
   public state$ = this.robot$.pipe(
