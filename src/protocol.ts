@@ -26,6 +26,16 @@ export type Command =
   | { type: 'poseReset' }
   | { type: 'auth'; token: string };
 
+/** Pose at one instant: millimetres, radians counter-clockwise, robot millis(). */
+export type PoseSample = { xMm: number; yMm: number; theta: number; tMs: number };
+
+/**
+ * Robot pose when a sweep started and when it ended (a sweep takes ~390 ms and the robot may move during it).
+ * Sent right before the matching MEASURE frame:
+ * "SWEEP_POSE T0=<ms> X0=<mm> Y0=<mm> TH0=<mrad> T1=<ms> X1=<mm> Y1=<mm> TH1=<mrad>"
+ */
+export type SweepPose = { start: PoseSample; end: PoseSample };
+
 /**
  * Robot pose from odometry, world frame (REP-103): x forward, y left, theta counter-clockwise.
  * "POSE X=<mm> Y=<mm> TH=<mrad> T=<ms> Q=<0|1>" (+ optional RELOC=1 after a reboot that restored a saved pose).
@@ -52,7 +62,8 @@ export type RobotMessage =
   | { type: 'error'; reason: string }
   | { type: 'calibration'; distanceMm: number; index: number; total: number; sweep: Sweep }
   | { type: 'calibrationDone'; distanceMm: number; done: number }
-  | { type: 'pose'; pose: Pose };
+  | { type: 'pose'; pose: Pose }
+  | { type: 'sweepPose'; sweepPose: SweepPose };
 
 export const encodeCommand = (command: Command): string => {
   switch (command.type) {
@@ -78,6 +89,7 @@ const isSensorDirection = (value: string): value is SensorDirection =>
  * - "STATE SPEED=1000 P=0.1500 I=0.0500 D=0.0000 MEASURING=0"
  * - "ERR <reason>"
  * - "POSE X=120 Y=-4 TH=-31 T=123456 Q=0"
+ * - "SWEEP_POSE T0=.. X0=.. Y0=.. TH0=.. T1=.. X1=.. Y1=.. TH1=.." (sent right before the MEASURE frame it belongs to)
  * - "CAL <distance_mm> <i>/<n> FRONT=412 ..." (one sweep of a sensor characterisation run) and "CAL_DONE <distance_mm> <done>"
  */
 export const parseMessage = (msg: string): RobotMessage | undefined => {
@@ -89,6 +101,7 @@ export const parseMessage = (msg: string): RobotMessage | undefined => {
     case 'CAL': return parseCalibration(tokens);
     case 'CAL_DONE': return parseCalibrationDone(tokens);
     case 'POSE': return parsePose(tokens);
+    case 'SWEEP_POSE': return parseSweepPose(tokens);
     case 'ERR': return { type: 'error', reason: trimmed.slice(3).trim() || 'unknown' };
     default: return undefined;
   }
@@ -139,6 +152,36 @@ const parsePose = (tokens: string[]): RobotMessage | undefined => {
     return undefined;
   }
   return { type: 'pose', pose: { xMm: x, yMm: y, theta: th / 1000, tMs: t, questionable: q === 1, relocated: reloc === 1 } };
+};
+
+const parseSweepPose = (tokens: string[]): RobotMessage | undefined => {
+  const fields = new Map<string, string>();
+  for (const token of tokens) {
+    const [key, value, ...rest] = token.split('=');
+    if (!key || value === undefined || rest.length > 0 || fields.has(key)) {
+      return undefined;
+    }
+    fields.set(key, value);
+  }
+  if (fields.size !== 8) {
+    return undefined;
+  }
+  const sample = (suffix: '0' | '1'): PoseSample | undefined => {
+    const int = (key: string, signed: boolean): number | undefined => {
+      const raw = fields.get(key + suffix);
+      return raw !== undefined && (signed ? /^-?\d+$/ : /^\d+$/).test(raw) ? parseInt(raw, 10) : undefined;
+    };
+    const t = int('T', false);
+    const x = int('X', true);
+    const y = int('Y', true);
+    const th = int('TH', true);
+    return t === undefined || x === undefined || y === undefined || th === undefined
+      ? undefined
+      : { xMm: x, yMm: y, theta: th / 1000, tMs: t };
+  };
+  const start = sample('0');
+  const end = sample('1');
+  return start && end ? { type: 'sweepPose', sweepPose: { start, end } } : undefined;
 };
 
 const parseCalibration = (tokens: string[]): RobotMessage | undefined => {

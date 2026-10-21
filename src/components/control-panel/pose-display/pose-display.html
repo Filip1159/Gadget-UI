@@ -15,5 +15,11 @@
   } @else {
     <p class="pose-display__note">No pose yet</p>
   }
+  @if (sweepMotion(); as motion) {
+    <p class="pose-display__note">
+      Last sweep: moved {{ motion.mm.toFixed(0) }} mm, turned {{ motion.degrees.toFixed(1) }}&deg;
+      in {{ motion.ms }} ms
+    </p>
+  }
   <button type="button" [disabled]="!connected()" (click)="reset()">Reset pose</button>
 </section>

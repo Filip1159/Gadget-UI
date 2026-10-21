@@ -1,7 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import { Subject, filter, map, share } from 'rxjs';
 import { DEFAULT_ROBOT_URL } from './config';
-import { Command, Pose, RobotMessage, RobotState, Sweep, encodeCommand, parseMessage } from './protocol';
+import { Command, Pose, RobotMessage, RobotState, Sweep, SweepPose, encodeCommand, parseMessage } from './protocol';
 
 export type SocketStatus = 'connecting' | 'open' | 'closed';
 
@@ -58,6 +58,12 @@ export class SocketService {
   public pose$ = this.robot$.pipe(
     filter((m): m is Extract<RobotMessage, { type: 'pose' }> => m.type === 'pose'),
     map(m => m.pose as Pose),
+  );
+
+  /** Pose at the start and end of a sweep, emitted just before that sweep's `sweeps$` value. */
+  public sweepPose$ = this.robot$.pipe(
+    filter((m): m is Extract<RobotMessage, { type: 'sweepPose' }> => m.type === 'sweepPose'),
+    map(m => m.sweepPose as SweepPose),
   );
 
   /** Rejection reasons ("ERR <reason>") for commands the robot did not accept. */

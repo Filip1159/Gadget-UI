@@ -57,6 +57,7 @@ See the firmware repo's `CLAUDE.md` for the authoritative wire format; mirrored 
 **Incoming (robot -> this app)**:
 - `MEASURE <DIRECTION>=<mm|OOR> ...` - one frame per sweep with all 10 sensors (`OOR` = out of range, drawn as a dashed outline). All-or-nothing parse: a malformed token or unknown sensor drops the whole frame; a valid frame replaces the whole distance map.
 - `POSE X=<mm> Y=<mm> TH=<mrad> T=<ms> Q=<0|1> [RELOC=1]` - odometry pose every 200 ms and after connect (exposed as `pose$`, shown by `pose-display/`; all-or-nothing integer parse).
+- `SWEEP_POSE T0=.. X0=.. Y0=.. TH0=.. T1=.. X1=.. Y1=.. TH1=..` - pose at the start and end of a sweep, sent right before its `MEASURE` frame (exposed as `sweepPose$`; pairing with `sweeps$` is item 2.1; `pose-display/` shows how far the robot moved during the last sweep).
 - `CAL <distance_mm> <i>/<n> <DIRECTION>=<mm|OOR> ...` / `CAL_DONE <distance_mm> <done>` - sweeps of a calibration run (exposed as `calibration$`; the preview also draws them live).
 - `STATE SPEED=<n> P=<f> I=<f> D=<f> MEASURING=<0|1>` - sent right after connect; initialises the slider, PID fields and the measuring button, so UI and robot cannot disagree after a reload/reconnect.
 - `ERR <reason>` - a command was rejected; shown in an orange banner.

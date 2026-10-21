@@ -61,6 +61,28 @@ describe('parseMessage POSE', () => {
   });
 });
 
+describe('parseMessage SWEEP_POSE', () => {
+  it('parses start and end poses', () => {
+    expect(parseMessage('SWEEP_POSE T0=1000 X0=10 Y0=-2 TH0=5 T1=1390 X1=30 Y1=-3 TH1=-12')).toEqual({
+      type: 'sweepPose',
+      sweepPose: {
+        start: { xMm: 10, yMm: -2, theta: 0.005, tMs: 1000 },
+        end: { xMm: 30, yMm: -3, theta: -0.012, tMs: 1390 },
+      },
+    });
+  });
+
+  it('rejects malformed or incomplete frames', () => {
+    for (const bad of [
+      'SWEEP_POSE', 'SWEEP_POSE T0=1 X0=1 Y0=1 TH0=1', 'SWEEP_POSE T0=1 X0=1 Y0=1 TH0=1 T1=2 X1=2 Y1=2',
+      'SWEEP_POSE T0=1 X0=1 Y0=1 TH0=1 T1=2 X1=2 Y1=2 TH1=x', 'SWEEP_POSE T0=-1 X0=1 Y0=1 TH0=1 T1=2 X1=2 Y1=2 TH1=2',
+      'SWEEP_POSE T0=1 X0=1 Y0=1 TH0=1 T1=2 X1=2 Y1=2 TH1=2 Q=0',
+    ]) {
+      expect(parseMessage(bad), bad).toBeUndefined();
+    }
+  });
+});
+
 describe('parseMessage CAL / CAL_DONE', () => {
   it('parses a calibration sweep', () => {
     expect(parseMessage('CAL 300 5/100 FRONT=298 BACK=OOR')).toEqual({
