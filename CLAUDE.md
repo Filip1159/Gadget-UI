@@ -31,7 +31,7 @@ src/
       pose-display/                  live odometry pose + reset button
       sensor-calibration/            sensor characterisation panel + CSV recorder (firmware MAPPING.MD item 0.4)
       robot-preview/               canvas visualization: robot-geometry.ts (robot in mm), sensor-renderer.ts (drawing), robot-preview.ts (container)
-      map-panel/                   top-down map in the odometry frame: map-view.ts (world<->canvas, pan, zoom), map-trail.ts (bounded path), map-renderer.ts, map-panel.ts (container)
+      map-panel/                   top-down map in the odometry frame: map-view.ts (world<->canvas, pan, zoom), map-trail.ts (bounded path), point-projection.ts (sweep + pose -> world points), point-cloud.ts (bounded, age-stamped), map-grid.ts (grid spacing and lines), map-renderer.ts, map-panel.ts (container)
 ```
 
 `SocketService` is the **only** WebSocket in the app. It is connected once by `App`. It provides:
