@@ -32,6 +32,7 @@ src/
       sensor-calibration/            sensor characterisation panel + CSV recorder (firmware MAPPING.MD item 0.4)
       robot-preview/               canvas visualization: robot-geometry.ts (robot in mm), sensor-renderer.ts (drawing), robot-preview.ts (container)
       map-panel/                   top-down map in the odometry frame: map-view.ts (world<->canvas, pan, zoom), map-trail.ts (bounded path), point-projection.ts (sweep + pose -> world points), point-cloud.ts (bounded, age-stamped), map-grid.ts (grid spacing and lines), map-renderer.ts, map-panel.ts (container)
+      log-panel/                   record POSE/SWEEP_POSE/MEASURE frames to NDJSON and replay a file into SocketService.messages$ (raw-log.ts holds the format, recorder, parser, replayer)
 ```
 
 `SocketService` is the **only** WebSocket in the app. It is connected once by `App`. It provides:

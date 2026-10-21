@@ -1,0 +1,30 @@
+.log-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 280px;
+  background-color: #eee;
+  padding: 12px;
+  border-radius: 4px;
+
+  &__title {
+    margin: 0;
+    font-size: 18px;
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  &__status,
+  &__error {
+    margin: 0;
+    font-size: 13px;
+  }
+
+  &__error {
+    color: #b91c1c;
+  }
+}

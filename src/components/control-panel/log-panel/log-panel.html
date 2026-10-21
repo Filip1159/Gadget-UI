@@ -1,0 +1,40 @@
+<section class="log-panel">
+  <h2 class="log-panel__title">Raw log</h2>
+
+  <div class="log-panel__row">
+    <button type="button" [disabled]="replaying()" (click)="toggleRecording()">
+      {{ recording() ? 'Stop recording' : 'Record' }}
+    </button>
+    <button type="button" [disabled]="recording() || recordedFrames() === 0" (click)="download()">Download</button>
+  </div>
+  <p class="log-panel__status">
+    {{ recordedFrames() }} frames recorded{{ recording() ? ' (recording)' : '' }}
+    @if (full()) { - log full, recording stopped }
+  </p>
+
+  <div class="log-panel__row">
+    <label class="log-panel__file">
+      Load file
+      <input type="file" accept=".ndjson,.jsonl,.json,.txt" [disabled]="replaying()" (change)="load($event)" />
+    </label>
+  </div>
+  <div class="log-panel__row">
+    @if (replaying()) {
+      <button type="button" (click)="stopReplay()">Stop replay</button>
+    } @else {
+      <button type="button" [disabled]="!canPlay()" (click)="play()">Replay</button>
+    }
+    <label>
+      Speed
+      <select [value]="speed()" (change)="setSpeed($event)" [disabled]="replaying()">
+        @for (s of speeds; track s) {
+          <option [value]="s">{{ s === 0 ? 'Instant' : s + 'x' }}</option>
+        }
+      </select>
+    </label>
+  </div>
+  <p class="log-panel__status">{{ loadedFrames() }} frames loaded</p>
+  @if (message(); as text) {
+    <p class="log-panel__error">{{ text }}</p>
+  }
+</section>

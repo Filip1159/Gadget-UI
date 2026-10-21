@@ -1,3 +1,4 @@
+import { LogReplayer, parseNdjson, RawLogRecorder } from './raw-log';
 import { SocketService } from './socket.service';
 
 class FakeWebSocket {
@@ -126,6 +127,39 @@ describe('SocketService', () => {
       },
       { pose: null, front: 410 },
     ]);
+  });
+
+  it('replays a recorded log into the same streams with identical results', () => {
+    const drive = [
+      'POSE X=0 Y=0 TH=0 T=1000 Q=0',
+      'SWEEP_POSE T0=1000 X0=0 Y0=0 TH0=0 T1=1390 X1=20 Y1=0 TH1=0',
+      'STATE SPEED=1 P=1 I=1 D=1 MEASURING=1',
+      'MEASURE FRONT=400 BACK=OOR',
+      'POSE X=20 Y=0 TH=0 T=1400 Q=0',
+    ];
+    const capture = () => {
+      const seen: unknown[] = [];
+      service.robot$.subscribe(m => seen.push(m));
+      service.posedSweeps$.subscribe(p => seen.push(p));
+      return seen;
+    };
+
+    const live = capture();
+    const recorder = new RawLogRecorder();
+    service.messages$.subscribe(frame => recorder.add(frame, Date.now()));
+    drive.forEach(frame => service.messages$.next(frame));
+    const recorded = live.splice(0);
+
+    const parsed = parseNdjson(recorder.toNdjson());
+    if ('error' in parsed) {
+      throw new Error(parsed.error);
+    }
+    new LogReplayer().start(parsed.entries, frame => service.messages$.next(frame), 0);
+
+    // The STATE frame is not logged, so compare against the live frames without it.
+    const withoutState = (list: unknown[]) => list.filter(m => (m as { type?: string }).type !== 'state');
+    expect(withoutState(live)).toEqual(withoutState(recorded));
+    expect(live.length).toBeGreaterThan(0);
   });
 
   it('emits only valid robot frames on robot$', () => {
