@@ -46,6 +46,14 @@ export class SocketService {
     map(m => m.state as RobotState),
   );
 
+  /** Frames of a sensor characterisation run (`CAL`): one per sweep, then `calibrationDone`. */
+  public calibration$ = this.robot$.pipe(
+    filter(
+      (m): m is Extract<RobotMessage, { type: 'calibration' | 'calibrationDone' }> =>
+        m.type === 'calibration' || m.type === 'calibrationDone',
+    ),
+  );
+
   /** Rejection reasons ("ERR <reason>") for commands the robot did not accept. */
   public errors$ = this.robot$.pipe(
     filter((m): m is Extract<RobotMessage, { type: 'error' }> => m.type === 'error'),

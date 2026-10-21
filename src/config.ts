@@ -5,5 +5,10 @@ export const DEFAULT_ROBOT_URL = 'ws://192.168.1.16:88'
 export const MAX_SPEED = 2000
 export const SPEED_STEP = 100
 
+/** Sensor characterisation limits; must match CAL_MAX_DISTANCE_MM / CAL_MAX_COUNT in the firmware. */
+export const CAL_MAX_DISTANCE_MM = 2000
+export const CAL_MAX_COUNT = 500
+export const CAL_DEFAULT_COUNT = 100
+
 export const DEFAULT_SPEED = 1000
 export const DEFAULT_PID = { P: 0.15, I: 0.05, D: 0 }

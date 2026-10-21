@@ -47,3 +47,8 @@ Serve the app over plain `http://` (the dev server does): a page served over `ht
 | Start/Stop Measuring | Continuous 10-sensor sweeps, drawn as cones around the robot |
 
 The robot also stops by itself if no command arrives for 1 second or the connection drops.
+
+FORWARD - both ticks negative
+BACKWARD - both ticks positive
+LEFT - unit0 ticks positive, unit1 ticks negative
+RIGHT - unit0 ticks negative, unit1 ticks positive

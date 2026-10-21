@@ -1,0 +1,41 @@
+<section class="sensor-calibration">
+  <h2 class="sensor-calibration__title">Sensor calibration</h2>
+  <p class="sensor-calibration__hint">
+    Park the robot still, square to a flat wall, with the sensor under test facing it. Enter the
+    ruler-measured distance from that sensor to the wall.
+  </p>
+
+  <label class="sensor-calibration__field">
+    Sensor
+    <select name="target" [ngModel]="target()" (ngModelChange)="target.set($event)" [disabled]="running()">
+      @for (name of targets; track name) {
+        <option [value]="name">{{ name }}</option>
+      }
+    </select>
+  </label>
+  <label class="sensor-calibration__field">
+    Distance (mm)
+    <input type="number" name="distance" min="1" [max]="maxDistance" [ngModel]="distanceMm()" (ngModelChange)="distanceMm.set($event)" [disabled]="running()" />
+  </label>
+  <label class="sensor-calibration__field">
+    Sweeps
+    <input type="number" name="count" min="1" [max]="maxCount" [ngModel]="count()" (ngModelChange)="count.set($event)" [disabled]="running()" />
+  </label>
+
+  <div class="sensor-calibration__buttons">
+    @if (running()) {
+      <button type="button" (click)="stop()">Stop</button>
+    } @else {
+      <button type="button" [disabled]="!canStart()" (click)="start()">Start</button>
+    }
+    <button type="button" [disabled]="recordedRows() === 0" (click)="download()">Download CSV</button>
+    <button type="button" [disabled]="recordedRows() === 0 || running()" (click)="clear()">Clear</button>
+  </div>
+
+  <p class="sensor-calibration__status">
+    @if (running()) {
+      Recording {{ done() }} / {{ total() }} &middot;
+    }
+    {{ recordedRows() }} sweeps recorded
+  </p>
+</section>

@@ -32,6 +32,16 @@ export class RobotPreview {
             this.scheduleRedraw();
         });
 
+        // A calibration run (CAL) shows its sweeps live; the firmware stops continuous measurement for it.
+        this.socket.calibration$.pipe(takeUntilDestroyed()).subscribe(message => {
+            if (message.type === 'calibration') {
+                this.isMeasuring.set(false);
+                this.distances = message.sweep;
+                this.lastSweepAt = Date.now();
+                this.scheduleRedraw();
+            }
+        });
+
         // The robot reports its own state on connect, so the button always matches reality.
         this.socket.state$.pipe(takeUntilDestroyed()).subscribe(state => this.isMeasuring.set(state.measuring));
 

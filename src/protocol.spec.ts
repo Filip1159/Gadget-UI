@@ -36,6 +36,31 @@ describe('parseMessage STATE / ERR', () => {
   });
 });
 
+describe('parseMessage CAL / CAL_DONE', () => {
+  it('parses a calibration sweep', () => {
+    expect(parseMessage('CAL 300 5/100 FRONT=298 BACK=OOR')).toEqual({
+      type: 'calibration',
+      distanceMm: 300,
+      index: 5,
+      total: 100,
+      sweep: new Map([['FRONT', 298], ['BACK', null]]),
+    });
+  });
+
+  it('parses the done frame', () => {
+    expect(parseMessage('CAL_DONE 300 100')).toEqual({ type: 'calibrationDone', distanceMm: 300, done: 100 });
+  });
+
+  it('rejects malformed calibration frames', () => {
+    for (const bad of [
+      'CAL', 'CAL 300', 'CAL 300 5/100', 'CAL 300 5 FRONT=1', 'CAL x 5/100 FRONT=1', 'CAL 300 5/100 SIDEWAYS=1',
+      'CAL_DONE', 'CAL_DONE 300', 'CAL_DONE 300 x', 'CAL_DONE 300 1 2',
+    ]) {
+      expect(parseMessage(bad), bad).toBeUndefined();
+    }
+  });
+});
+
 describe('encodeCommand', () => {
   it('encodes every command type', () => {
     expect(encodeCommand({ type: 'drive', direction: 'FORWARD_LEFT' })).toBe('FORWARD_LEFT');
@@ -43,6 +68,8 @@ describe('encodeCommand', () => {
     expect(encodeCommand({ type: 'pid', p: 0.15, i: 0.05, d: 0 })).toBe('PID 0.15 0.05 0');
     expect(encodeCommand({ type: 'measureStart' })).toBe('MEASURE_START');
     expect(encodeCommand({ type: 'measureStop' })).toBe('MEASURE_STOP');
+    expect(encodeCommand({ type: 'calibrate', distanceMm: 300, count: 100 })).toBe('CAL 300 100');
+    expect(encodeCommand({ type: 'calibrateStop' })).toBe('CAL_STOP');
     expect(encodeCommand({ type: 'auth', token: 'abc' })).toBe('AUTH abc');
   });
 });
