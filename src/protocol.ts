@@ -23,7 +23,25 @@ export type Command =
   | { type: 'measureStop' }
   | { type: 'calibrate'; distanceMm: number; count: number }
   | { type: 'calibrateStop' }
+  | { type: 'poseReset' }
   | { type: 'auth'; token: string };
+
+/**
+ * Robot pose from odometry, world frame (REP-103): x forward, y left, theta counter-clockwise.
+ * "POSE X=<mm> Y=<mm> TH=<mrad> T=<ms> Q=<0|1>" (+ optional RELOC=1 after a reboot that restored a saved pose).
+ */
+export type Pose = {
+  xMm: number;
+  yMm: number;
+  /** Radians, counter-clockwise. */
+  theta: number;
+  /** Robot millis() when the pose was taken. */
+  tMs: number;
+  /** Wheel slip / stall suspected. */
+  questionable: boolean;
+  /** Pose restored from a reboot, only a guess. */
+  relocated: boolean;
+};
 
 /** Robot state, sent right after (authenticated) connect: "STATE SPEED=1000 P=0.1500 I=0.0500 D=0.0000 MEASURING=0" */
 export type RobotState = { speed: number; p: number; i: number; d: number; measuring: boolean };
@@ -33,7 +51,8 @@ export type RobotMessage =
   | { type: 'state'; state: RobotState }
   | { type: 'error'; reason: string }
   | { type: 'calibration'; distanceMm: number; index: number; total: number; sweep: Sweep }
-  | { type: 'calibrationDone'; distanceMm: number; done: number };
+  | { type: 'calibrationDone'; distanceMm: number; done: number }
+  | { type: 'pose'; pose: Pose };
 
 export const encodeCommand = (command: Command): string => {
   switch (command.type) {
@@ -44,6 +63,7 @@ export const encodeCommand = (command: Command): string => {
     case 'measureStop': return 'MEASURE_STOP';
     case 'calibrate': return `CAL ${command.distanceMm} ${command.count}`;
     case 'calibrateStop': return 'CAL_STOP';
+    case 'poseReset': return 'POSE_RESET';
     case 'auth': return `AUTH ${command.token}`;
   }
 };
@@ -57,6 +77,7 @@ const isSensorDirection = (value: string): value is SensorDirection =>
  * - "MEASURE FRONT=412 FRONT_LEFT_45=OOR ..." (OOR = out of range)
  * - "STATE SPEED=1000 P=0.1500 I=0.0500 D=0.0000 MEASURING=0"
  * - "ERR <reason>"
+ * - "POSE X=120 Y=-4 TH=-31 T=123456 Q=0"
  * - "CAL <distance_mm> <i>/<n> FRONT=412 ..." (one sweep of a sensor characterisation run) and "CAL_DONE <distance_mm> <done>"
  */
 export const parseMessage = (msg: string): RobotMessage | undefined => {
@@ -67,6 +88,7 @@ export const parseMessage = (msg: string): RobotMessage | undefined => {
     case 'STATE': return parseState(tokens);
     case 'CAL': return parseCalibration(tokens);
     case 'CAL_DONE': return parseCalibrationDone(tokens);
+    case 'POSE': return parsePose(tokens);
     case 'ERR': return { type: 'error', reason: trimmed.slice(3).trim() || 'unknown' };
     default: return undefined;
   }
@@ -91,6 +113,32 @@ const parseMeasure = (tokens: string[]): RobotMessage | undefined => {
     }
   }
   return { type: 'measure', sweep };
+};
+
+const parsePose = (tokens: string[]): RobotMessage | undefined => {
+  const fields = new Map<string, string>();
+  for (const token of tokens) {
+    const [key, value, ...rest] = token.split('=');
+    if (!key || value === undefined || rest.length > 0 || fields.has(key)) {
+      return undefined;
+    }
+    fields.set(key, value);
+  }
+  const integer = (key: string, signed: boolean): number | undefined => {
+    const raw = fields.get(key);
+    return raw !== undefined && (signed ? /^-?\d+$/ : /^\d+$/).test(raw) ? parseInt(raw, 10) : undefined;
+  };
+  const x = integer('X', true);
+  const y = integer('Y', true);
+  const th = integer('TH', true);
+  const t = integer('T', false);
+  const q = integer('Q', false);
+  const reloc = fields.has('RELOC') ? integer('RELOC', false) : 0;
+  if (x === undefined || y === undefined || th === undefined || t === undefined ||
+      (q !== 0 && q !== 1) || (reloc !== 0 && reloc !== 1)) {
+    return undefined;
+  }
+  return { type: 'pose', pose: { xMm: x, yMm: y, theta: th / 1000, tMs: t, questionable: q === 1, relocated: reloc === 1 } };
 };
 
 const parseCalibration = (tokens: string[]): RobotMessage | undefined => {

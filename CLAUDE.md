@@ -28,6 +28,7 @@ src/
       steering/                    direction pad, speed slider, PID form; keyboard-steering.ts is the framework-free keyboard logic
       longpress-button/            emits `press` immediately and every 500ms while held, `release` once at the end
       slider/                      numeric slider with a `model()` value (two-way bindable)
+      pose-display/                  live odometry pose + reset button
       sensor-calibration/            sensor characterisation panel + CSV recorder (firmware MAPPING.MD item 0.4)
       robot-preview/               canvas visualization: robot-geometry.ts (robot in mm), sensor-renderer.ts (drawing), robot-preview.ts (container)
 ```
@@ -49,11 +50,13 @@ See the firmware repo's `CLAUDE.md` for the authoritative wire format; mirrored 
 - `<DIRECTION>` - one of `FORWARD`, `FORWARD_LEFT`, `FORWARD_RIGHT`, `LEFT`, `STOP`, `RIGHT`, `BACKWARD`, `BACKWARD_LEFT`, `BACKWARD_RIGHT` (`DriveDirection`; anything else is rejected by the firmware with `ERR`). Sent from the direction buttons (`longpress-button` repeats every 500ms while held; `release` sends `STOP`; buttons are disabled while the socket is not open, STOP never is) and from the keyboard through `KeyboardSteering`: `w q e a d x z c` = the eight directions while held (keydown sends + 500ms heartbeat; keyup sends the direction of a key still held or `STOP`), `s`, Space, Esc, window blur and a hidden tab = `STOP`; keystrokes in inputs and Ctrl/Alt/Meta combos are ignored. The firmware stops by itself after 1s without a direction command, which is why the heartbeat matters.
 - `SPEED <number>` - from the speed slider (throttled to one per 100ms, trailing value always sent).
 - `PID <P> <I> <D>` - from the PID form; only sent for finite numbers >= 0 (the button is disabled otherwise).
+- `POSE_RESET` - from the "Reset pose" button of `pose-display/`: zeroes the robot's odometry pose.
 - `CAL <distance_mm> <count>` / `CAL_STOP` - from the "Sensor calibration" panel (`sensor-calibration/`): the robot ranges `count` sweeps while standing still; the panel records them (`calibration-recorder.ts`) and downloads a CSV for the firmware repo's `tools/analyze_sensors.py`.
 - `MEASURE_START` / `MEASURE_STOP` - from the "Start/Stop Measuring" button.
 
 **Incoming (robot -> this app)**:
 - `MEASURE <DIRECTION>=<mm|OOR> ...` - one frame per sweep with all 10 sensors (`OOR` = out of range, drawn as a dashed outline). All-or-nothing parse: a malformed token or unknown sensor drops the whole frame; a valid frame replaces the whole distance map.
+- `POSE X=<mm> Y=<mm> TH=<mrad> T=<ms> Q=<0|1> [RELOC=1]` - odometry pose every 200 ms and after connect (exposed as `pose$`, shown by `pose-display/`; all-or-nothing integer parse).
 - `CAL <distance_mm> <i>/<n> <DIRECTION>=<mm|OOR> ...` / `CAL_DONE <distance_mm> <done>` - sweeps of a calibration run (exposed as `calibration$`; the preview also draws them live).
 - `STATE SPEED=<n> P=<f> I=<f> D=<f> MEASURING=<0|1>` - sent right after connect; initialises the slider, PID fields and the measuring button, so UI and robot cannot disagree after a reload/reconnect.
 - `ERR <reason>` - a command was rejected; shown in an orange banner.

@@ -1,0 +1,19 @@
+<section class="pose-display">
+  <h2 class="pose-display__title">Pose</h2>
+  @if (pose(); as pose) {
+    <dl class="pose-display__values" [class.pose-display__values--uncertain]="pose.questionable || pose.relocated">
+      <dt>x</dt><dd>{{ pose.xMm }} mm</dd>
+      <dt>y</dt><dd>{{ pose.yMm }} mm</dd>
+      <dt>heading</dt><dd>{{ headingDegrees()?.toFixed(1) }}&deg;</dd>
+    </dl>
+    @if (pose.questionable) {
+      <p class="pose-display__note">Wheel slip suspected</p>
+    }
+    @if (pose.relocated) {
+      <p class="pose-display__note">Restored after reboot: only a guess</p>
+    }
+  } @else {
+    <p class="pose-display__note">No pose yet</p>
+  }
+  <button type="button" [disabled]="!connected()" (click)="reset()">Reset pose</button>
+</section>

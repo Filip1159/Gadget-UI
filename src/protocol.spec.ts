@@ -36,6 +36,31 @@ describe('parseMessage STATE / ERR', () => {
   });
 });
 
+describe('parseMessage POSE', () => {
+  it('parses a pose frame', () => {
+    expect(parseMessage('POSE X=1106 Y=-43 TH=-49 T=123456 Q=0')).toEqual({
+      type: 'pose',
+      pose: { xMm: 1106, yMm: -43, theta: -0.049, tMs: 123456, questionable: false, relocated: false },
+    });
+  });
+
+  it('parses the quality and relocation flags', () => {
+    expect(parseMessage('POSE X=0 Y=0 TH=0 T=1 Q=1 RELOC=1')).toEqual({
+      type: 'pose',
+      pose: { xMm: 0, yMm: 0, theta: 0, tMs: 1, questionable: true, relocated: true },
+    });
+  });
+
+  it('rejects malformed pose frames', () => {
+    for (const bad of [
+      'POSE', 'POSE X=1 Y=2 TH=3 T=4', 'POSE X=1 Y=2 TH=3 Q=0', 'POSE X=a Y=2 TH=3 T=4 Q=0', 'POSE X=1.5 Y=2 TH=3 T=4 Q=0',
+      'POSE X=1 Y=2 TH=3 T=-4 Q=0', 'POSE X=1 Y=2 TH=3 T=4 Q=2', 'POSE X=1 X=2 Y=2 TH=3 T=4 Q=0', 'POSE X=1 Y=2 TH=3 T=4 Q=0 RELOC=2',
+    ]) {
+      expect(parseMessage(bad), bad).toBeUndefined();
+    }
+  });
+});
+
 describe('parseMessage CAL / CAL_DONE', () => {
   it('parses a calibration sweep', () => {
     expect(parseMessage('CAL 300 5/100 FRONT=298 BACK=OOR')).toEqual({
@@ -70,6 +95,7 @@ describe('encodeCommand', () => {
     expect(encodeCommand({ type: 'measureStop' })).toBe('MEASURE_STOP');
     expect(encodeCommand({ type: 'calibrate', distanceMm: 300, count: 100 })).toBe('CAL 300 100');
     expect(encodeCommand({ type: 'calibrateStop' })).toBe('CAL_STOP');
+    expect(encodeCommand({ type: 'poseReset' })).toBe('POSE_RESET');
     expect(encodeCommand({ type: 'auth', token: 'abc' })).toBe('AUTH abc');
   });
 });

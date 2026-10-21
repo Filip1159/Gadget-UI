@@ -1,7 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import { Subject, filter, map, share } from 'rxjs';
 import { DEFAULT_ROBOT_URL } from './config';
-import { Command, RobotMessage, RobotState, Sweep, encodeCommand, parseMessage } from './protocol';
+import { Command, Pose, RobotMessage, RobotState, Sweep, encodeCommand, parseMessage } from './protocol';
 
 export type SocketStatus = 'connecting' | 'open' | 'closed';
 
@@ -52,6 +52,12 @@ export class SocketService {
       (m): m is Extract<RobotMessage, { type: 'calibration' | 'calibrationDone' }> =>
         m.type === 'calibration' || m.type === 'calibrationDone',
     ),
+  );
+
+  /** Odometry pose, broadcast by the firmware every 200 ms (and once on connect). */
+  public pose$ = this.robot$.pipe(
+    filter((m): m is Extract<RobotMessage, { type: 'pose' }> => m.type === 'pose'),
+    map(m => m.pose as Pose),
   );
 
   /** Rejection reasons ("ERR <reason>") for commands the robot did not accept. */
