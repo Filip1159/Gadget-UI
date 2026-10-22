@@ -1,13 +1,14 @@
-import { Component } from '@angular/core'
-import { FontAwesomeModule } from '@fortawesome/angular-fontawesome'
-import { faUserSecret } from '@fortawesome/free-solid-svg-icons'
+import { Component, computed, inject } from '@angular/core';
+import { SocketService } from '../../core/socket/socket.service';
+
+const STATUS_LABELS = { open: 'Online', connecting: 'Connecting', closed: 'Offline' } as const;
 
 @Component({
-    selector: 'app-header',
-    imports: [FontAwesomeModule],
-    templateUrl: './header.html',
-    styleUrl: './header.scss',
+  selector: 'app-header',
+  templateUrl: './header.html',
+  styleUrl: './header.scss',
 })
 export class Header {
-    faUserSecret = faUserSecret
+  protected socket = inject(SocketService);
+  statusLabel = computed(() => STATUS_LABELS[this.socket.status()]);
 }

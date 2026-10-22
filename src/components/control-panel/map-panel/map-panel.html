@@ -1,22 +1,52 @@
 <section class="map-panel">
   <div class="map-panel__toolbar">
-    <h2 class="map-panel__title">Map</h2>
+    <h2>Map</h2>
     <button type="button" (click)="recentre()">Recentre</button>
     <button type="button" (click)="clearTrail()">Clear map</button>
   </div>
   <div class="map-panel__options">
-    <label><input type="checkbox" [checked]="showGrid()" (change)="showGrid.set(!showGrid())" /> Grid</label>
-    <label><input type="checkbox" [checked]="showTrail()" (change)="showTrail.set(!showTrail())" /> Trail</label>
-    <label><input type="checkbox" [checked]="showPoints()" (change)="showPoints.set(!showPoints())" /> Points</label>
-    <label><input type="checkbox" [checked]="showRays()" (change)="showRays.set(!showRays())" /> Rays</label>
+    <label
+      ><input type="checkbox" [checked]="showGrid()" (change)="showGrid.set(!showGrid())" />
+      Grid</label
+    >
+    <label
+      ><input type="checkbox" [checked]="showTrail()" (change)="showTrail.set(!showTrail())" />
+      Trail</label
+    >
+    <label
+      ><input type="checkbox" [checked]="showPoints()" (change)="showPoints.set(!showPoints())" />
+      Points</label
+    >
+    <label
+      ><input type="checkbox" [checked]="showRays()" (change)="showRays.set(!showRays())" />
+      Rays</label
+    >
     <label>
-      <input type="checkbox" [checked]="stationaryOnly()" (change)="stationaryOnly.set(!stationaryOnly())" />
+      <input
+        type="checkbox"
+        [checked]="stationaryOnly()"
+        (change)="stationaryOnly.set(!stationaryOnly())"
+      />
       Stationary sweeps only
     </label>
     <label>
       Range
-      <input type="number" min="0" step="50" [value]="minRangeMm()" (change)="setRange('min', $event)" /> to
-      <input type="number" min="0" step="50" [value]="maxRangeMm()" (change)="setRange('max', $event)" /> mm
+      <input
+        type="number"
+        min="0"
+        step="50"
+        [value]="minRangeMm()"
+        (change)="setRange('min', $event)"
+      />
+      to
+      <input
+        type="number"
+        min="0"
+        step="50"
+        [value]="maxRangeMm()"
+        (change)="setRange('max', $event)"
+      />
+      mm
     </label>
   </div>
   <canvas
@@ -26,5 +56,6 @@
     (pointermove)="onPointerMove($event)"
     (pointerup)="onPointerUp($event)"
     (pointercancel)="onPointerUp($event)"
-    (wheel)="onWheel($event)"></canvas>
+    (wheel)="onWheel($event)"
+  ></canvas>
 </section>

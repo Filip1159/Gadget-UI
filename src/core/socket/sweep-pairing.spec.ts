@@ -1,4 +1,4 @@
-import { RobotMessage, Sweep, SweepPose } from './protocol';
+import { RobotMessage, Sweep, SweepPose } from '../protocol';
 import { SweepPairer } from './sweep-pairing';
 
 const sweep: Sweep = new Map([['FRONT', 400]]);

@@ -1,10 +1,25 @@
 <div class="robot-preview">
+  <canvas #canvas></canvas>
+  <div class="robot-preview__side">
+    <h2>Sensors</h2>
     <button
-        type="button"
-        class="measure-toggle"
-        [class.measuring]="isMeasuring()"
-        (click)="toggleMeasurement()">
-        {{ isMeasuring() ? 'Stop Measuring' : 'Start Measuring' }}
+      type="button"
+      class="measure-toggle"
+      [class.primary]="!isMeasuring()"
+      [class.danger]="isMeasuring()"
+      [class.measuring]="isMeasuring()"
+      (click)="toggleMeasurement()"
+    >
+      {{ isMeasuring() ? 'Stop Measuring' : 'Start Measuring' }}
     </button>
-    <canvas #canvas></canvas>
+    <ul class="robot-preview__legend muted">
+      @for (band of bands; track band.label) {
+        <li>
+          <span class="robot-preview__swatch" [style.background]="band.color"></span
+          >{{ band.label }}
+        </li>
+      }
+      <li><span class="robot-preview__swatch robot-preview__swatch--none"></span>no obstacle</li>
+    </ul>
+  </div>
 </div>

@@ -1,19 +1,29 @@
 .slider {
+  appearance: none;
+  width: 8px;
+  height: 200px;
+  margin: 0;
+  background: var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  writing-mode: vertical-lr;
+  direction: rtl;
+
+  &::-webkit-slider-thumb {
     appearance: none;
-    width: 10px;
-    height: 250px;
-    background: white;
+    width: 28px;
+    height: 14px;
+    background: var(--primary);
+    border-radius: 7px;
     cursor: pointer;
-    writing-mode: vertical-lr;
-    direction: rtl;
+  }
 
-    &::-webkit-slider-thumb {
-        appearance: none;
-        border-radius: 4px;
-        width: 25px;
-        height: 10px;
-        background: blue;
-        cursor: pointer;
-    }
+  &::-moz-range-thumb {
+    width: 28px;
+    height: 14px;
+    background: var(--primary);
+    border: 0;
+    border-radius: 7px;
+    cursor: pointer;
+  }
 }
-

@@ -1,18 +1,66 @@
+// Sensor view on the left (always visible: it also shows calibration sweeps live), tabs on the right.
 .control-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
+  gap: var(--gap);
+  align-items: start;
+
+  @media (max-width: 1000px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  &__map {
+    position: sticky;
+    top: var(--gap);
+
+    @media (max-width: 1000px) {
+      position: static;
+    }
+  }
+
+  &__main {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 40px;
-    background-color: #ddb;
-    padding: 20px;
-    border-radius: 10px;
-    margin: 20px;
+    flex-direction: column;
+    gap: var(--gap);
+    min-width: 0;
+  }
+}
 
-    @media (max-width: 1200px) {
-        flex-direction: column;
-    }
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+}
 
-    @media (min-width: 1200px) {
-        flex-direction: row;
-    }
+.tab {
+  padding: 10px 18px;
+  margin-bottom: -1px;
+  font: inherit;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--text);
+  }
+
+  &[aria-selected='true'] {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+  }
+}
+
+.tab-panel {
+  display: grid;
+  gap: var(--gap);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  align-items: start;
+
+  // The steering pad needs a full row.
+  steering {
+    grid-column: 1 / -1;
+  }
 }

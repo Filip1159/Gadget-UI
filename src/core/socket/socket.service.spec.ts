@@ -1,17 +1,35 @@
-import { LogReplayer, parseNdjson, RawLogRecorder } from './raw-log';
+import { LogReplayer, parseNdjson, RawLogRecorder } from '../log/raw-log';
 import { SocketService } from './socket.service';
 
 class FakeWebSocket {
-  static CONNECTING = 0; static OPEN = 1; static CLOSING = 2; static CLOSED = 3;
+  static CONNECTING = 0;
+  static OPEN = 1;
+  static CLOSING = 2;
+  static CLOSED = 3;
   static instances: FakeWebSocket[] = [];
   readyState = FakeWebSocket.CONNECTING;
   sent: string[] = [];
-  onopen?: () => void; onclose?: () => void; onerror?: () => void; onmessage?: (e: { data: string }) => void;
-  constructor(public url: string) { FakeWebSocket.instances.push(this); }
-  send(message: string) { this.sent.push(message); }
-  close() { /* the service ignores the old socket's onclose; tests trigger drop() themselves */ }
-  open() { this.readyState = FakeWebSocket.OPEN; this.onopen?.(); }
-  drop() { this.readyState = FakeWebSocket.CLOSED; this.onclose?.(); }
+  onopen?: () => void;
+  onclose?: () => void;
+  onerror?: () => void;
+  onmessage?: (e: { data: string }) => void;
+  constructor(public url: string) {
+    FakeWebSocket.instances.push(this);
+  }
+  send(message: string) {
+    this.sent.push(message);
+  }
+  close() {
+    /* the service ignores the old socket's onclose; tests trigger drop() themselves */
+  }
+  open() {
+    this.readyState = FakeWebSocket.OPEN;
+    this.onopen?.();
+  }
+  drop() {
+    this.readyState = FakeWebSocket.CLOSED;
+    this.onclose?.();
+  }
 }
 
 describe('SocketService', () => {
@@ -67,7 +85,12 @@ describe('SocketService', () => {
 
   it('setUrl validates, reconnects to the new address and does not auto-reconnect to the old one', () => {
     const store: Record<string, string> = {};
-    vi.stubGlobal('localStorage', { getItem: (k: string) => store[k] ?? null, setItem: (k: string, v: string) => { store[k] = v; } });
+    vi.stubGlobal('localStorage', {
+      getItem: (k: string) => store[k] ?? null,
+      setItem: (k: string, v: string) => {
+        store[k] = v;
+      },
+    });
     service.connect();
     FakeWebSocket.instances[0].open();
     expect(service.setUrl('http://nope')).toBe(false);
@@ -81,7 +104,12 @@ describe('SocketService', () => {
 
   it('sends AUTH as the very first frame when a token is configured', () => {
     const store: Record<string, string> = { robotToken: 'secret' };
-    vi.stubGlobal('localStorage', { getItem: (k: string) => store[k] ?? null, setItem: (k: string, v: string) => { store[k] = v; } });
+    vi.stubGlobal('localStorage', {
+      getItem: (k: string) => store[k] ?? null,
+      setItem: (k: string, v: string) => {
+        store[k] = v;
+      },
+    });
     service.connect();
     FakeWebSocket.instances[0].open();
     expect(FakeWebSocket.instances[0].sent).toEqual(['AUTH secret']);
@@ -89,7 +117,12 @@ describe('SocketService', () => {
 
   it('does not send AUTH without a token', () => {
     const store: Record<string, string> = {};
-    vi.stubGlobal('localStorage', { getItem: (k: string) => store[k] ?? null, setItem: (k: string, v: string) => { store[k] = v; } });
+    vi.stubGlobal('localStorage', {
+      getItem: (k: string) => store[k] ?? null,
+      setItem: (k: string, v: string) => {
+        store[k] = v;
+      },
+    });
     service.connect();
     FakeWebSocket.instances[0].open();
     expect(FakeWebSocket.instances[0].sent).toEqual([]);
@@ -97,7 +130,7 @@ describe('SocketService', () => {
 
   it('exposes state and surfaces robot errors for a few seconds', () => {
     const states: unknown[] = [];
-    service.state$.subscribe(s => states.push(s));
+    service.state$.subscribe((s) => states.push(s));
     service.connect();
     const ws = FakeWebSocket.instances[0];
     ws.onmessage?.({ data: 'STATE SPEED=500 P=0.1 I=0.2 D=0.3 MEASURING=0' });
@@ -110,7 +143,9 @@ describe('SocketService', () => {
 
   it('pairs each MEASURE frame with the SWEEP_POSE frame before it on posedSweeps$', () => {
     const received: { pose: unknown; front: number | null | undefined }[] = [];
-    service.posedSweeps$.subscribe(p => received.push({ pose: p.pose, front: p.sweep.get('FRONT') }));
+    service.posedSweeps$.subscribe((p) =>
+      received.push({ pose: p.pose, front: p.sweep.get('FRONT') }),
+    );
     service.connect();
     const ws = FakeWebSocket.instances[0];
     ws.onmessage?.({ data: 'SWEEP_POSE T0=1000 X0=0 Y0=0 TH0=0 T1=1390 X1=20 Y1=0 TH1=0' });
@@ -139,32 +174,33 @@ describe('SocketService', () => {
     ];
     const capture = () => {
       const seen: unknown[] = [];
-      service.robot$.subscribe(m => seen.push(m));
-      service.posedSweeps$.subscribe(p => seen.push(p));
+      service.robot$.subscribe((m) => seen.push(m));
+      service.posedSweeps$.subscribe((p) => seen.push(p));
       return seen;
     };
 
     const live = capture();
     const recorder = new RawLogRecorder();
-    service.messages$.subscribe(frame => recorder.add(frame, Date.now()));
-    drive.forEach(frame => service.messages$.next(frame));
+    service.messages$.subscribe((frame) => recorder.add(frame, Date.now()));
+    drive.forEach((frame) => service.messages$.next(frame));
     const recorded = live.splice(0);
 
     const parsed = parseNdjson(recorder.toNdjson());
     if ('error' in parsed) {
       throw new Error(parsed.error);
     }
-    new LogReplayer().start(parsed.entries, frame => service.messages$.next(frame), 0);
+    new LogReplayer().start(parsed.entries, (frame) => service.messages$.next(frame), 0);
 
     // The STATE frame is not logged, so compare against the live frames without it.
-    const withoutState = (list: unknown[]) => list.filter(m => (m as { type?: string }).type !== 'state');
+    const withoutState = (list: unknown[]) =>
+      list.filter((m) => (m as { type?: string }).type !== 'state');
     expect(withoutState(live)).toEqual(withoutState(recorded));
     expect(live.length).toBeGreaterThan(0);
   });
 
   it('emits only valid robot frames on robot$', () => {
     const received: unknown[] = [];
-    service.robot$.subscribe(m => received.push(m));
+    service.robot$.subscribe((m) => received.push(m));
     service.connect();
     FakeWebSocket.instances[0].onmessage?.({ data: 'garbage' });
     FakeWebSocket.instances[0].onmessage?.({ data: 'MEASURE FRONT=100' });

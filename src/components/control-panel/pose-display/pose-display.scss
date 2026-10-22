@@ -1,40 +1,31 @@
 .pose-display {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 160px;
-  background-color: #eee;
-  padding: 12px;
-  border-radius: 4px;
-
-  &__title {
-    margin: 0;
-    font-size: 18px;
+  &__body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
   }
 
   &__values {
     display: grid;
     grid-template-columns: auto 1fr;
-    gap: 2px 12px;
+    gap: 2px 16px;
+    width: 100%;
     margin: 0;
     font-variant-numeric: tabular-nums;
 
     dt {
-      font-weight: bold;
+      color: var(--text-muted);
     }
 
     dd {
       margin: 0;
+      font-weight: 600;
       text-align: right;
     }
 
-    &--uncertain {
-      color: #b45309;
+    &--uncertain dd {
+      color: var(--warning);
     }
-  }
-
-  &__note {
-    margin: 0;
-    font-size: 13px;
   }
 }

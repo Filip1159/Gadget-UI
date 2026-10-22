@@ -1,1 +1,10 @@
-<input class="slider" type="range" [min]="0" [max]="max" [step]="step" [value]="value()" (input)="onInput($event)" />
+<input
+  class="slider"
+  type="range"
+  aria-label="Speed"
+  [min]="0"
+  [max]="max"
+  [step]="step"
+  [value]="value()"
+  (input)="onInput($event)"
+/>

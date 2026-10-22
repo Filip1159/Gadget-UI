@@ -1,7 +1,8 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Pose, SweepPose } from '../../../protocol';
-import { SocketService } from '../../../socket.service';
+import { Pose, SweepPose } from '../../../core/protocol';
+import { NOT_OPEN, onSocketStatus, socketConnected } from '../../../core/socket/socket-status';
+import { SocketService } from '../../../core/socket/socket.service';
 
 /** Live odometry pose from the robot (POSE frames) with a button that zeroes it (POSE_RESET). */
 @Component({
@@ -27,21 +28,28 @@ export class PoseDisplay {
       ms: end.tMs - start.tMs,
     };
   });
-  connected = computed(() => this.socket.status() === 'open');
+  /** One line for the collapsed panel. */
+  summary = computed(() => {
+    const pose = this.pose();
+    return pose
+      ? `${pose.xMm}, ${pose.yMm} mm \u00b7 ${this.headingDegrees()?.toFixed(0)}\u00b0`
+      : '\u2014';
+  });
+  connected = socketConnected(this.socket);
   headingDegrees = computed(() => {
     const pose = this.pose();
     return pose ? (pose.theta * 180) / Math.PI : null;
   });
 
   constructor() {
-    this.socket.pose$.pipe(takeUntilDestroyed()).subscribe(pose => this.pose.set(pose));
-    this.socket.sweepPose$.pipe(takeUntilDestroyed()).subscribe(sweepPose => this.sweepPose.set(sweepPose));
+    this.socket.pose$.pipe(takeUntilDestroyed()).subscribe((pose) => this.pose.set(pose));
+    this.socket.sweepPose$
+      .pipe(takeUntilDestroyed())
+      .subscribe((sweepPose) => this.sweepPose.set(sweepPose));
 
-    effect(() => {
-      if (this.socket.status() !== 'open') {
-        this.pose.set(null);
-        this.sweepPose.set(null);
-      }
+    onSocketStatus(this.socket, NOT_OPEN, () => {
+      this.pose.set(null);
+      this.sweepPose.set(null);
     });
   }
 

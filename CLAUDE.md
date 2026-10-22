@@ -12,40 +12,50 @@ Angular 21 (zoneless, standalone components, signals) single-page app that conne
 - `npm run build` - `ng build`.
 - `npm run watch` - `ng build --watch --configuration development`.
 - `npm test` - `ng test` (Vitest).
+- `npm run format` / `npm run format:check` - Prettier (config in `package.json`: 100 columns, single quotes; `.editorconfig`: 2-space indent, LF) over `src/`, `e2e/` and `playwright.config.ts`. Run `format` before committing.
+- `npm run e2e` - Playwright end-to-end tests (`e2e/*.e2e.ts`, Chromium; starts `ng serve` on port 4300 itself; first time: `npx playwright install chromium`). `npm run e2e:ui` for the interactive runner. The robot is faked with `page.routeWebSocket` (`e2e/fixtures.ts`: `FakeRobot` records sent frames and pushes frames to the app; `offlineApp` is the app with no robot).
+
+## Styling
+
+Design tokens (`--primary`, `--border`, `--radius`, ...) and the look shared by every panel live in `src/styles.scss`: each panel host is a card with the same `h2` title; buttons are neutral unless given `primary` / `danger`; `.field`, `.actions` and `.muted` are shared layout/text helpers; `.collapsible` styles a `<details>` panel (e2e: `expand(page, 'pose-display')` opens one); `.button` is the large direction-pad key. Component SCSS should only add layout, not colours or fonts.
 
 ## Architecture
 
 ```
 src/
   main.ts, app/                    bootstrap; App connects the socket and shows the connection/error banners
-  config.ts                        defaults: robot URL, speed range/step, placeholder speed + PID
-  protocol.ts                      barrel for protocol/: types.ts (Command, RobotMessage, ...), encode.ts (encodeCommand), parse.ts (parseMessage), fields.ts (strict KEY=value helpers every parser is built on)
-  socket.service.ts                singleton WebSocket wrapper (root-provided)
+  core/                            no UI; everything the components build on
+    config.ts                      defaults: robot URL, speed range/step, placeholder speed + PID
+    protocol/                      index.ts barrel: types.ts (Command, RobotMessage, ...), encode.ts (encodeCommand), parse.ts (parseMessage), fields.ts (strict KEY=value helpers every parser is built on)
+    socket/                        socket.service.ts (singleton WebSocket wrapper, root-provided), sweep-pairing.ts (SweepPairer), socket-status.ts (`socketConnected`, `onSocketStatus`: shared "connected" signal and reset-on-disconnect)
+    log/                           raw-log.ts: NDJSON format, recorder, parser, replayer
+    redraw-scheduler.ts            coalesces redraw requests into one requestAnimationFrame (preview, map)
+    download.ts                    `downloadFile` / `timestampedName` for CSV and NDJSON downloads
   components/
     header/                        presentational header
     control-panel/
-      control-panel.ts/html        hosts <steering> + <robot-preview>, no logic of its own
+      control-panel.ts/html        page layout: <map-panel> in the left column (always visible); right column = compact <robot-preview> above tabs (Drive: steering, pose, log; Calibration: sensor-calibration). Both tab panels stay mounted (just `hidden`) so a calibration run survives a tab switch. Pose and Raw log are `<details class="collapsible">`, collapsed by default (the summary shows the live pose / a recording marker)
       steering/                    direction pad, speed slider, PID form; keyboard-steering.ts is the framework-free keyboard logic
       longpress-button/            emits `press` immediately and every 500ms while held, `release` once at the end
       slider/                      numeric slider with a `model()` value (two-way bindable)
       pose-display/                  live odometry pose + reset button
       sensor-calibration/            sensor characterisation panel + CSV recorder (firmware MAPPING.MD item 0.4)
       robot-preview/               canvas visualization: robot-geometry.ts (robot in mm), sensor-renderer.ts (drawing), robot-preview.ts (container)
-      map-panel/                   top-down map in the odometry frame: map-view.ts (world<->canvas, pan, zoom), map-trail.ts (bounded path), point-projection.ts (sweep + pose -> world points), point-cloud.ts (bounded, age-stamped), map-grid.ts (grid spacing and lines), map-renderer.ts, map-panel.ts (container)
-      log-panel/                   record POSE/SWEEP_POSE/MEASURE frames to NDJSON and replay a file into SocketService.messages$ (raw-log.ts holds the format, recorder, parser, replayer)
+      map-panel/                   top-down map in the odometry frame: map-view.ts (world<->canvas, pan, zoom), map-gestures.ts (drag-to-pan and wheel-zoom logic, framework-free), map-trail.ts (bounded path), point-projection.ts (sweep + pose -> world points), point-cloud.ts (bounded, age-stamped), map-grid.ts (grid spacing and lines), map-renderer.ts, map-panel.ts (container)
+      log-panel/                   record POSE/SWEEP_POSE/MEASURE frames to NDJSON and replay a file into SocketService.messages$ (core/log/raw-log.ts holds the format, recorder, parser, replayer)
 ```
 
 `SocketService` is the **only** WebSocket in the app. It is connected once by `App`. It provides:
 - `status` signal (`connecting | open | closed`), automatic reconnect with exponential backoff (0.5s to 10s), `onerror` handling.
-- `url` / `setUrl()` and `token` / `setToken()`, persisted in `localStorage` (`robotUrl`, `robotToken`; default `ws://192.168.1.16:88` in `src/config.ts`). If a token is set it is sent as the very first frame (`AUTH <token>`) on every (re)connect.
+- `url` / `setUrl()` and `token` / `setToken()`, persisted in `localStorage` (`robotUrl`, `robotToken`; default `ws://192.168.1.16:88` in `src/core/config.ts`). If a token is set it is sent as the very first frame (`AUTH <token>`) on every (re)connect.
 - `send(command: Command): boolean` - typed; returns `false` (and warns) when the socket is not open, never throws.
-- Parsed streams, all fed from one validated parse (`robot$` is `share()`d): `sweeps$` (one full sensor sweep per frame), `posedSweeps$` (each sweep joined with the preceding `SWEEP_POSE`, `{ sweep, pose | null }`, via `SweepPairer` in `sweep-pairing.ts`; use this for mapping), `pose$`, `sweepPose$`, `state$` (robot settings after connect), `errors$` (robot rejections, also surfaced as `lastError`, auto-cleared after 4s). Unrecognised/malformed frames are logged once and dropped. `messages$` is the raw text stream; prefer the parsed ones.
+- Parsed streams, all fed from one validated parse (`robot$` is `share()`d): `sweeps$` (one full sensor sweep per frame), `posedSweeps$` (each sweep joined with the preceding `SWEEP_POSE`, `{ sweep, pose | null }`, via `SweepPairer` in `core/socket/sweep-pairing.ts`; use this for mapping), `pose$`, `sweepPose$`, `state$` (robot settings after connect), `errors$` (robot rejections, also surfaced as `lastError`, auto-cleared after 4s). Unrecognised/malformed frames are logged once and dropped. `messages$` is the raw text stream; prefer the parsed ones.
 
 Components never build or parse wire strings themselves: they send `{ type: 'drive', direction }` etc. and subscribe to the parsed streams.
 
 ## Communication schema (WebSocket, plain text, no JSON)
 
-See the firmware repo's `CLAUDE.md` for the authoritative wire format; mirrored here for quick reference. Everything below is typed in `protocol.ts` (`Command`, `RobotMessage`).
+See the firmware repo's `CLAUDE.md` for the authoritative wire format; mirrored here for quick reference. Everything below is typed in `core/protocol` (`Command`, `RobotMessage`).
 
 **Outgoing (this app -> robot)**:
 - `AUTH <token>` - only if a token is configured; always first.
@@ -72,9 +82,10 @@ See the firmware repo's `CLAUDE.md` for the authoritative wire format; mirrored 
 
 ## Known gotchas / fragile areas
 
-- **Validate before touching shared render state.** `Subject` subscribers swallow exceptions (rethrown asynchronously), so a throw inside a subscriber looks like data silently stopping. All parsing is therefore done up front in `protocol/parse.ts` and bad frames never reach `RobotPreview`; keep it that way when adding message types.
+- **Validate before touching shared render state.** `Subject` subscribers swallow exceptions (rethrown asynchronously), so a throw inside a subscriber looks like data silently stopping. All parsing is therefore done up front in `core/protocol/parse.ts` and bad frames never reach `RobotPreview`; keep it that way when adding message types.
 - **Everything the robot should do on its own is also enforced in firmware** (stop on disconnect, 1s command timeout), because browser tabs die. Do not rely on the UI alone to stop the robot.
 - `ws://` only works from an `http://` page (mixed-content rule). The token is sent in clear text.
+- `LongPressButton` releases (-> `STOP`) in `ngOnDestroy`, not via `DestroyRef`: a `DestroyRef` callback runs after the parent's `(release)` listener is gone and the STOP would be lost (`longpress-button.destroy.spec.ts`).
 - `LongPressButton` emits `press` synchronously on pointer down (so even a very short tap sends its direction before the `STOP`), and guards against a second start while pressed; keep both properties if you touch it.
 - Continuous measurement is paced by the firmware (a new sweep is requested every 200ms, sweeps are ranged in parallel), so the frontend cannot make it update faster.
 - jsdom has no canvas: component tests must mock `HTMLCanvasElement.prototype.getContext` (see `app.spec.ts`).

@@ -7,9 +7,12 @@ describe('KeyboardSteering', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     sent = [];
-    kb = new KeyboardSteering(d => sent.push(d), 500);
+    kb = new KeyboardSteering((d) => sent.push(d), 500);
   });
-  afterEach(() => { kb.destroy(); vi.useRealTimers(); });
+  afterEach(() => {
+    kb.destroy();
+    vi.useRealTimers();
+  });
 
   it('sends on keydown, repeats as heartbeat, STOP on keyup', () => {
     kb.keyDown('w');
@@ -47,7 +50,7 @@ describe('KeyboardSteering', () => {
     kb.blur();
     expect(sent.at(-1)).toBe('STOP');
     kb.blur();
-    expect(sent.filter(s => s === 'STOP').length).toBe(2);
+    expect(sent.filter((s) => s === 'STOP').length).toBe(2);
   });
 
   it('Space and Escape are emergency stops', () => {
@@ -58,6 +61,6 @@ describe('KeyboardSteering', () => {
     kb.keyDown('Escape');
     expect(sent.at(-1)).toBe('STOP');
     vi.advanceTimersByTime(2000);
-    expect(sent.filter(s => s === 'FORWARD').length).toBe(2);
+    expect(sent.filter((s) => s === 'FORWARD').length).toBe(2);
   });
 });

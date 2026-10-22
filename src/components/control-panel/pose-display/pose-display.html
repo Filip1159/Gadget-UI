@@ -1,25 +1,36 @@
-<section class="pose-display">
-  <h2 class="pose-display__title">Pose</h2>
-  @if (pose(); as pose) {
-    <dl class="pose-display__values" [class.pose-display__values--uncertain]="pose.questionable || pose.relocated">
-      <dt>x</dt><dd>{{ pose.xMm }} mm</dd>
-      <dt>y</dt><dd>{{ pose.yMm }} mm</dd>
-      <dt>heading</dt><dd>{{ headingDegrees()?.toFixed(1) }}&deg;</dd>
-    </dl>
-    @if (pose.questionable) {
-      <p class="pose-display__note">Wheel slip suspected</p>
+<details class="pose-display collapsible">
+  <summary>
+    <h2>Pose</h2>
+    <span class="muted">{{ summary() }}</span>
+  </summary>
+  <div class="pose-display__body">
+    @if (pose(); as pose) {
+      <dl
+        class="pose-display__values"
+        [class.pose-display__values--uncertain]="pose.questionable || pose.relocated"
+      >
+        <dt>x</dt>
+        <dd>{{ pose.xMm }} mm</dd>
+        <dt>y</dt>
+        <dd>{{ pose.yMm }} mm</dd>
+        <dt>heading</dt>
+        <dd>{{ headingDegrees()?.toFixed(1) }}&deg;</dd>
+      </dl>
+      @if (pose.questionable) {
+        <p class="muted">Wheel slip suspected</p>
+      }
+      @if (pose.relocated) {
+        <p class="muted">Restored after reboot: only a guess</p>
+      }
+    } @else {
+      <p class="muted">No pose yet</p>
     }
-    @if (pose.relocated) {
-      <p class="pose-display__note">Restored after reboot: only a guess</p>
+    @if (sweepMotion(); as motion) {
+      <p class="muted">
+        Last sweep: moved {{ motion.mm.toFixed(0) }} mm, turned {{ motion.degrees.toFixed(1) }}&deg;
+        in {{ motion.ms }} ms
+      </p>
     }
-  } @else {
-    <p class="pose-display__note">No pose yet</p>
-  }
-  @if (sweepMotion(); as motion) {
-    <p class="pose-display__note">
-      Last sweep: moved {{ motion.mm.toFixed(0) }} mm, turned {{ motion.degrees.toFixed(1) }}&deg;
-      in {{ motion.ms }} ms
-    </p>
-  }
-  <button type="button" [disabled]="!connected()" (click)="reset()">Reset pose</button>
-</section>
+    <button type="button" [disabled]="!connected()" (click)="reset()">Reset pose</button>
+  </div>
+</details>

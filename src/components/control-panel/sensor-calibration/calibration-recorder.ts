@@ -1,4 +1,4 @@
-import { SENSOR_DIRECTIONS, SensorDirection, Sweep } from '../../../protocol';
+import { SENSOR_DIRECTIONS, SensorDirection, Sweep } from '../../../core/protocol';
 
 /** The sensor that faces the wall during a run, or ALL when every sensor is valid for it. */
 export type CalibrationTarget = SensorDirection | 'ALL';
@@ -33,7 +33,7 @@ export class CalibrationRecorder {
   toCsv(): string {
     const lines = [['target', 'distance_mm', 'sample', ...SENSOR_DIRECTIONS].join(',')];
     for (const row of this.rows) {
-      const readings = SENSOR_DIRECTIONS.map(sensor => row.sweep.get(sensor) ?? '');
+      const readings = SENSOR_DIRECTIONS.map((sensor) => row.sweep.get(sensor) ?? '');
       lines.push([row.target, row.distanceMm, row.sample, ...readings].join(','));
     }
     return lines.join('\n') + '\n';

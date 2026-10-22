@@ -1,4 +1,4 @@
-import { RobotMessage, Sweep, SweepPose } from './protocol';
+import { RobotMessage, Sweep, SweepPose } from '../protocol';
 
 /** One complete sweep and the robot pose around it; `pose` is null if the robot sent none (older firmware). */
 export type PosedSweep = { sweep: Sweep; pose: SweepPose | null };

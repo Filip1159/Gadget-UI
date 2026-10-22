@@ -1,27 +1,266 @@
+// Design tokens and the look shared by every panel. Components add layout only.
+:root {
+  --bg: #eef0f4;
+  --surface: #fff;
+  --surface-muted: #f6f7f9;
+  --border: #d9dde4;
+  --text: #1f2430;
+  --text-muted: #5d6573;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --danger: #dc2626;
+  --danger-hover: #b91c1c;
+  --success: #16a34a;
+  --warning: #b45309;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --shadow: 0 1px 2px rgb(16 24 40 / 8%);
+  --gap: 16px;
+  --control-height: 36px;
+}
+
 * {
-    font-family: 'Roboto', sans-serif;
+  box-sizing: border-box;
 }
 
 body {
-    margin: 0;
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font:
+    15px/1.4 system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
 }
 
+[hidden] {
+  display: none !important;
+}
+
+// Every panel is a card with the same title.
+:is(robot-preview, map-panel, steering, pose-display, sensor-calibration, log-panel) {
+  display: block;
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: var(--gap);
+
+  h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  p {
+    margin: 0;
+  }
+}
+
+// Small secondary text inside panels.
+.muted {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+// Buttons: neutral by default, `primary` / `danger` for the main action of a panel.
+button:not(.button):not(.tab) {
+  min-height: var(--control-height);
+  padding: 0 14px;
+  font: inherit;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition:
+    background-color 0.12s,
+    border-color 0.12s;
+
+  &:hover:not(:disabled) {
+    background: var(--surface-muted);
+    border-color: #b7bdc9;
+  }
+
+  &.primary,
+  &.danger {
+    color: #fff;
+    border-color: transparent;
+  }
+
+  &.primary {
+    background: var(--primary);
+
+    &:hover:not(:disabled) {
+      background: var(--primary-hover);
+    }
+  }
+
+  &.danger {
+    background: var(--danger);
+
+    &:hover:not(:disabled) {
+      background: var(--danger-hover);
+    }
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// Direction pad keys (steering, longpress-button).
 .button {
-    font-size: 20px;
-    font-weight: 700;
-    color: white;
-    background-color: blue;
-    padding: 8px;
-    border-width: 0;
-    border-radius: 6px;
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  padding: 0;
+  color: var(--text);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition:
+    background-color 0.12s,
+    color 0.12s;
+
+  &:hover:not(:disabled) {
+    background: #e4e8f0;
+  }
+
+  &:active:not(:disabled) {
+    color: #fff;
+    background: var(--primary);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  &--stop {
+    color: var(--danger);
+
+    &:active:not(:disabled) {
+      background: var(--danger);
+    }
+  }
+}
+
+// Form controls.
+input:not([type='checkbox']):not([type='range']):not([type='file']),
+select {
+  min-height: var(--control-height);
+  padding: 0 10px;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+
+  &:disabled {
+    opacity: 0.6;
+    background: var(--surface-muted);
+  }
+}
+
+input[type='checkbox'] {
+  accent-color: var(--primary);
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+// A labelled field: label text left, control right.
+.field {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-weight: 500;
+
+  input,
+  select {
+    width: 150px;
+  }
+}
+
+// A row of buttons.
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+input[type='file'] {
+  font: inherit;
+  font-size: 13px;
+  color: var(--text-muted);
+
+  &::file-selector-button {
+    min-height: var(--control-height);
+    margin-right: 10px;
+    padding: 0 14px;
+    font: inherit;
+    font-weight: 500;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
     cursor: pointer;
+  }
 
-    &:hover {
-        background-color: rgb(0, 0, 200);
+  &:disabled::file-selector-button {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// Collapsible panel: <details class="collapsible"><summary><h2>Title</h2> <span class="muted">hint</span></summary>...
+.collapsible {
+  > summary {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+
+    &::-webkit-details-marker {
+      display: none;
     }
 
-    &:disabled {
-        cursor: not-allowed;
-        background-color: rgb(100, 100, 200);
+    // Chevron on the right.
+    &::after {
+      content: '';
+      width: 8px;
+      height: 8px;
+      margin: 0 4px 0 0;
+      border-right: 2px solid var(--text-muted);
+      border-bottom: 2px solid var(--text-muted);
+      transform: rotate(45deg);
+      transition: transform 0.15s;
     }
+
+    h2 {
+      margin-right: auto;
+    }
+  }
+
+  &[open] > summary {
+    margin-bottom: 12px;
+
+    &::after {
+      transform: rotate(225deg);
+    }
+  }
 }

@@ -1,8 +1,8 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Subject } from 'rxjs';
-import { Command } from '../../../protocol';
-import { SocketService } from '../../../socket.service';
+import { Command } from '../../../core/protocol';
+import { SocketService } from '../../../core/socket/socket.service';
 import { SensorCalibration } from './sensor-calibration';
 
 describe('SensorCalibration', () => {
@@ -16,7 +16,12 @@ describe('SensorCalibration', () => {
     sent.length = 0;
     status.set('open');
     TestBed.configureTestingModule({
-      providers: [{ provide: SocketService, useValue: { status, calibration$, errors$, send: (c: Command) => (sent.push(c), true) } }],
+      providers: [
+        {
+          provide: SocketService,
+          useValue: { status, calibration$, errors$, send: (c: Command) => (sent.push(c), true) },
+        },
+      ],
     });
     component = TestBed.runInInjectionContext(() => new SensorCalibration());
   });
@@ -29,8 +34,20 @@ describe('SensorCalibration', () => {
     expect(sent).toEqual([{ type: 'calibrate', distanceMm: 600, count: 2 }]);
     expect(component.running()).toBe(true);
 
-    calibration$.next({ type: 'calibration', distanceMm: 600, index: 1, total: 2, sweep: new Map([['FRONT_LEFT', 601]]) });
-    calibration$.next({ type: 'calibration', distanceMm: 600, index: 2, total: 2, sweep: new Map([['FRONT_LEFT', null]]) });
+    calibration$.next({
+      type: 'calibration',
+      distanceMm: 600,
+      index: 1,
+      total: 2,
+      sweep: new Map([['FRONT_LEFT', 601]]),
+    });
+    calibration$.next({
+      type: 'calibration',
+      distanceMm: 600,
+      index: 2,
+      total: 2,
+      sweep: new Map([['FRONT_LEFT', null]]),
+    });
     calibration$.next({ type: 'calibrationDone', distanceMm: 600, done: 2 });
 
     expect(component.recordedRows()).toBe(2);

@@ -1,40 +1,6 @@
 .sensor-calibration {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  max-width: 280px;
-  background-color: #eee;
-  padding: 12px;
-  border-radius: 4px;
-
-  &__title {
-    margin: 0;
-    font-size: 18px;
-  }
-
-  &__hint,
-  &__status {
-    margin: 0;
-    font-size: 13px;
-  }
-
-  &__field {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 8px;
-    font-weight: bold;
-
-    select,
-    input {
-      width: 140px;
-      padding: 4px;
-    }
-  }
-
-  &__buttons {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-  }
+  gap: 12px;
+  max-width: 460px;
 }

@@ -1,13 +1,19 @@
 <button
-    class="button"
-    [disabled]="disabled()"
-    [attr.aria-label]="label()"
-    style="touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none"
-    (pointerdown)="onPressStart($event)"
-    (pointerup)="onPressEnd()"
-    (pointercancel)="onPressEnd()"
-    (pointerleave)="onPressEnd()"
-    (lostpointercapture)="onPressEnd()"
-    (contextmenu)="$event.preventDefault()">
-    <ng-content></ng-content>
+  class="button"
+  [disabled]="disabled()"
+  [attr.aria-label]="label()"
+  style="
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  "
+  (pointerdown)="onPressStart($event)"
+  (pointerup)="onPressEnd()"
+  (pointercancel)="onPressEnd()"
+  (pointerleave)="onPressEnd()"
+  (lostpointercapture)="onPressEnd()"
+  (contextmenu)="$event.preventDefault()"
+>
+  <ng-content></ng-content>
 </button>

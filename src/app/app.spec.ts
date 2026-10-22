@@ -2,16 +2,33 @@ import { TestBed } from '@angular/core/testing';
 import { App } from './app';
 
 class FakeWebSocket {
-  static OPEN = 1; static CONNECTING = 0; static CLOSING = 2; static CLOSED = 3;
+  static OPEN = 1;
+  static CONNECTING = 0;
+  static CLOSING = 2;
+  static CLOSED = 3;
   static instances: FakeWebSocket[] = [];
   readyState = FakeWebSocket.CONNECTING;
   sent: string[] = [];
-  onopen?: () => void; onclose?: () => void; onerror?: () => void; onmessage?: (e: { data: string }) => void;
-  constructor(public url: string) { FakeWebSocket.instances.push(this); }
-  send(message: string) { this.sent.push(message); }
-  close() { /* not needed */ }
-  open() { this.readyState = FakeWebSocket.OPEN; this.onopen?.(); }
-  receive(data: string) { this.onmessage?.({ data }); }
+  onopen?: () => void;
+  onclose?: () => void;
+  onerror?: () => void;
+  onmessage?: (e: { data: string }) => void;
+  constructor(public url: string) {
+    FakeWebSocket.instances.push(this);
+  }
+  send(message: string) {
+    this.sent.push(message);
+  }
+  close() {
+    /* not needed */
+  }
+  open() {
+    this.readyState = FakeWebSocket.OPEN;
+    this.onopen?.();
+  }
+  receive(data: string) {
+    this.onmessage?.({ data });
+  }
 }
 
 // jsdom has no canvas; any 2D call is a no-op.
@@ -24,7 +41,9 @@ describe('App (rendered with a fake robot)', () => {
   beforeEach(async () => {
     FakeWebSocket.instances = [];
     vi.stubGlobal('WebSocket', FakeWebSocket);
-    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(fakeContext as unknown as CanvasRenderingContext2D);
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(
+      fakeContext as unknown as CanvasRenderingContext2D,
+    );
     await TestBed.configureTestingModule({ imports: [App] }).compileComponents();
     fixture = TestBed.createComponent(App);
     root = fixture.nativeElement as HTMLElement;
@@ -36,13 +55,16 @@ describe('App (rendered with a fake robot)', () => {
     vi.restoreAllMocks();
   });
 
-  const directionButtons = () => Array.from(root.querySelectorAll<HTMLButtonElement>('longpress-button button'));
+  const directionButtons = () =>
+    Array.from(root.querySelectorAll<HTMLButtonElement>('longpress-button button'));
 
   it('shows the connection banner and disables the direction pad while offline', () => {
     expect(root.querySelector('.connection-banner')).not.toBeNull();
     expect(directionButtons().length).toBe(8);
-    expect(directionButtons().every(b => b.disabled)).toBe(true);
-    expect(root.querySelector<HTMLButtonElement>('button[aria-label="Stop"]')?.disabled).toBe(false);
+    expect(directionButtons().every((b) => b.disabled)).toBe(true);
+    expect(root.querySelector<HTMLButtonElement>('button[aria-label="Stop"]')?.disabled).toBe(
+      false,
+    );
   });
 
   it('enables the pad once connected and initialises controls from the robot state frame', async () => {
@@ -52,7 +74,7 @@ describe('App (rendered with a fake robot)', () => {
     await fixture.whenStable();
 
     expect(root.querySelector('.connection-banner')).toBeNull();
-    expect(directionButtons().every(b => !b.disabled)).toBe(true);
+    expect(directionButtons().every((b) => !b.disabled)).toBe(true);
     expect(root.querySelector<HTMLInputElement>('input.slider')?.value).toBe('1400');
     expect(root.querySelector<HTMLInputElement>('input[name="P"]')?.value).toBe('0.2');
     expect(root.textContent).toContain('Stop Measuring');
@@ -63,7 +85,7 @@ describe('App (rendered with a fake robot)', () => {
     ws.open();
     await fixture.whenStable();
 
-    const forward = directionButtons().find(b => b.getAttribute('aria-label') === 'Forward')!;
+    const forward = directionButtons().find((b) => b.getAttribute('aria-label') === 'Forward')!;
     forward.dispatchEvent(new Event('pointerdown', { bubbles: true, cancelable: true }));
     forward.dispatchEvent(new Event('pointerup', { bubbles: true }));
     expect(ws.sent).toEqual(['FORWARD', 'STOP']);

@@ -1,16 +1,31 @@
 /** Wire protocol shared with the robot firmware (plain space-delimited text, see CLAUDE.md). */
 
 export const DRIVE_DIRECTIONS = [
-  'FORWARD', 'FORWARD_LEFT', 'FORWARD_RIGHT', 'LEFT', 'STOP', 'RIGHT',
-  'BACKWARD', 'BACKWARD_LEFT', 'BACKWARD_RIGHT',
+  'FORWARD',
+  'FORWARD_LEFT',
+  'FORWARD_RIGHT',
+  'LEFT',
+  'STOP',
+  'RIGHT',
+  'BACKWARD',
+  'BACKWARD_LEFT',
+  'BACKWARD_RIGHT',
 ] as const;
-export type DriveDirection = typeof DRIVE_DIRECTIONS[number];
+export type DriveDirection = (typeof DRIVE_DIRECTIONS)[number];
 
 export const SENSOR_DIRECTIONS = [
-  'FRONT', 'FRONT_LEFT_45', 'FRONT_LEFT', 'FRONT_RIGHT_45', 'FRONT_RIGHT',
-  'BACK', 'BACK_LEFT_45', 'BACK_LEFT', 'BACK_RIGHT_45', 'BACK_RIGHT',
+  'FRONT',
+  'FRONT_LEFT_45',
+  'FRONT_LEFT',
+  'FRONT_RIGHT_45',
+  'FRONT_RIGHT',
+  'BACK',
+  'BACK_LEFT_45',
+  'BACK_LEFT',
+  'BACK_RIGHT_45',
+  'BACK_RIGHT',
 ] as const;
-export type SensorDirection = typeof SENSOR_DIRECTIONS[number];
+export type SensorDirection = (typeof SENSOR_DIRECTIONS)[number];
 
 /** direction -> mm, null = out of range (no obstacle detected) */
 export type Sweep = Map<SensorDirection, number | null>;

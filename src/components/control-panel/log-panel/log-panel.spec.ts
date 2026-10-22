@@ -1,8 +1,8 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Subject } from 'rxjs';
-import { RawLogRecorder } from '../../../raw-log';
-import { SocketService } from '../../../socket.service';
+import { RawLogRecorder } from '../../../core/log/raw-log';
+import { SocketService } from '../../../core/socket/socket.service';
 import { LogPanel } from './log-panel';
 
 describe('LogPanel', () => {
@@ -41,7 +41,7 @@ describe('LogPanel', () => {
     expect(panel.loadedFrames()).toBe(2);
 
     const seen: string[] = [];
-    messages$.subscribe(f => seen.push(f));
+    messages$.subscribe((f) => seen.push(f));
     panel.speed.set(0);
     panel.play();
     expect(seen).toEqual(['POSE X=0 Y=0 TH=0 T=1 Q=0', 'MEASURE FRONT=400']);

@@ -1,4 +1,8 @@
 <header class="header">
-    <fa-icon [icon]="faUserSecret" size="3x" />
-    <h1 class="header__title">Gadget</h1>
+  <img class="header__logo" src="logo.svg" alt="" width="36" height="36" />
+  <h1 class="header__title">Gadget</h1>
+  <span class="header__status" role="status" [attr.data-status]="socket.status()">
+    <span class="header__dot"></span>
+    {{ statusLabel() }}
+  </span>
 </header>

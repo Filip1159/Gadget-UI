@@ -2,7 +2,13 @@ import { intField, keyValueFields, numberField } from './fields';
 
 describe('keyValueFields', () => {
   it('splits KEY=value tokens, keeping empty values', () => {
-    expect(keyValueFields(['A=1', 'B=', 'C=x'])).toEqual(new Map([['A', '1'], ['B', ''], ['C', 'x']]));
+    expect(keyValueFields(['A=1', 'B=', 'C=x'])).toEqual(
+      new Map([
+        ['A', '1'],
+        ['B', ''],
+        ['C', 'x'],
+      ]),
+    );
     expect(keyValueFields([])).toEqual(new Map());
   });
 
@@ -14,12 +20,21 @@ describe('keyValueFields', () => {
 
   it('rejects duplicate keys unless told otherwise', () => {
     expect(keyValueFields(['A=1', 'A=2'])).toBeUndefined();
-    expect(keyValueFields(['A=1', 'A=2'], { allowDuplicates: true })).toEqual(new Map([['A', '2']]));
+    expect(keyValueFields(['A=1', 'A=2'], { allowDuplicates: true })).toEqual(
+      new Map([['A', '2']]),
+    );
   });
 });
 
 describe('intField', () => {
-  const fields = new Map([['U', '12'], ['S', '-12'], ['F', '1.5'], ['E', ''], ['X', '1e3'], ['P', '+4']]);
+  const fields = new Map([
+    ['U', '12'],
+    ['S', '-12'],
+    ['F', '1.5'],
+    ['E', ''],
+    ['X', '1e3'],
+    ['P', '+4'],
+  ]);
 
   it('reads whole numbers; only signed fields may be negative', () => {
     expect(intField(fields, 'U')).toBe(12);
@@ -36,7 +51,14 @@ describe('intField', () => {
 });
 
 describe('numberField', () => {
-  const fields = new Map([['A', '0.15'], ['B', '-2'], ['E', ''], ['N', 'NaN'], ['I', 'Infinity'], ['J', 'abc']]);
+  const fields = new Map([
+    ['A', '0.15'],
+    ['B', '-2'],
+    ['E', ''],
+    ['N', 'NaN'],
+    ['I', 'Infinity'],
+    ['J', 'abc'],
+  ]);
 
   it('reads finite decimals', () => {
     expect(numberField(fields, 'A')).toBe(0.15);

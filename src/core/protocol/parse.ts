@@ -21,14 +21,22 @@ export const parseMessage = (msg: string): RobotMessage | undefined => {
   const trimmed = msg.trim();
   const [kind, ...tokens] = trimmed.split(/\s+/);
   switch (kind) {
-    case 'MEASURE': return parseMeasure(tokens);
-    case 'STATE': return parseState(tokens);
-    case 'CAL': return parseCalibration(tokens);
-    case 'CAL_DONE': return parseCalibrationDone(tokens);
-    case 'POSE': return parsePose(tokens);
-    case 'SWEEP_POSE': return parseSweepPose(tokens);
-    case 'ERR': return { type: 'error', reason: trimmed.slice(3).trim() || 'unknown' };
-    default: return undefined;
+    case 'MEASURE':
+      return parseMeasure(tokens);
+    case 'STATE':
+      return parseState(tokens);
+    case 'CAL':
+      return parseCalibration(tokens);
+    case 'CAL_DONE':
+      return parseCalibrationDone(tokens);
+    case 'POSE':
+      return parsePose(tokens);
+    case 'SWEEP_POSE':
+      return parseSweepPose(tokens);
+    case 'ERR':
+      return { type: 'error', reason: trimmed.slice(3).trim() || 'unknown' };
+    default:
+      return undefined;
   }
 };
 
@@ -64,11 +72,27 @@ const parsePose = (tokens: string[]): RobotMessage | undefined => {
   const t = intField(fields, 'T');
   const q = intField(fields, 'Q');
   const reloc = fields.has('RELOC') ? intField(fields, 'RELOC') : 0;
-  if (x === undefined || y === undefined || th === undefined || t === undefined ||
-      (q !== 0 && q !== 1) || (reloc !== 0 && reloc !== 1)) {
+  if (
+    x === undefined ||
+    y === undefined ||
+    th === undefined ||
+    t === undefined ||
+    (q !== 0 && q !== 1) ||
+    (reloc !== 0 && reloc !== 1)
+  ) {
     return undefined;
   }
-  return { type: 'pose', pose: { xMm: x, yMm: y, theta: th / 1000, tMs: t, questionable: q === 1, relocated: reloc === 1 } };
+  return {
+    type: 'pose',
+    pose: {
+      xMm: x,
+      yMm: y,
+      theta: th / 1000,
+      tMs: t,
+      questionable: q === 1,
+      relocated: reloc === 1,
+    },
+  };
 };
 
 const parseSweepPose = (tokens: string[]): RobotMessage | undefined => {
@@ -127,7 +151,13 @@ const parseState = (tokens: string[]): RobotMessage | undefined => {
   const i = numberField(fields, 'I');
   const d = numberField(fields, 'D');
   const measuring = numberField(fields, 'MEASURING');
-  if (speed === undefined || p === undefined || i === undefined || d === undefined || measuring === undefined) {
+  if (
+    speed === undefined ||
+    p === undefined ||
+    i === undefined ||
+    d === undefined ||
+    measuring === undefined
+  ) {
     return undefined;
   }
   return { type: 'state', state: { speed, p, i, d, measuring: measuring === 1 } };

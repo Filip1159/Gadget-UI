@@ -1,9 +1,11 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { CAL_DEFAULT_COUNT, CAL_MAX_COUNT, CAL_MAX_DISTANCE_MM } from '../../../config';
-import { SENSOR_DIRECTIONS } from '../../../protocol';
-import { SocketService } from '../../../socket.service';
+import { CAL_DEFAULT_COUNT, CAL_MAX_COUNT, CAL_MAX_DISTANCE_MM } from '../../../core/config';
+import { SENSOR_DIRECTIONS } from '../../../core/protocol';
+import { downloadFile, timestampedName } from '../../../core/download';
+import { NOT_OPEN, onSocketStatus, socketConnected } from '../../../core/socket/socket-status';
+import { SocketService } from '../../../core/socket/socket.service';
 import { CalibrationRecorder, CalibrationTarget } from './calibration-recorder';
 
 /**
@@ -35,12 +37,14 @@ export class SensorCalibration {
   total = signal(0);
   recordedRows = signal(0);
 
-  connected = computed(() => this.socket.status() === 'open');
-  valid = computed(() => isInt(this.distanceMm(), CAL_MAX_DISTANCE_MM) && isInt(this.count(), CAL_MAX_COUNT));
+  connected = socketConnected(this.socket);
+  valid = computed(
+    () => isInt(this.distanceMm(), CAL_MAX_DISTANCE_MM) && isInt(this.count(), CAL_MAX_COUNT),
+  );
   canStart = computed(() => this.connected() && this.valid() && !this.running());
 
   constructor() {
-    this.socket.calibration$.pipe(takeUntilDestroyed()).subscribe(message => {
+    this.socket.calibration$.pipe(takeUntilDestroyed()).subscribe((message) => {
       if (message.type === 'calibration') {
         this.recorder.add({
           target: this.runTarget,
@@ -63,11 +67,7 @@ export class SensorCalibration {
       }
     });
 
-    effect(() => {
-      if (this.socket.status() !== 'open') {
-        this.running.set(false);
-      }
-    });
+    onSocketStatus(this.socket, NOT_OPEN, () => this.running.set(false));
   }
 
   start(): void {
@@ -94,12 +94,7 @@ export class SensorCalibration {
   }
 
   download(): void {
-    const url = URL.createObjectURL(new Blob([this.recorder.toCsv()], { type: 'text/csv' }));
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `sensor-calibration-${new Date().toISOString().replace(/[:.]/g, '-')}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+    downloadFile(timestampedName('sensor-calibration', 'csv'), this.recorder.toCsv(), 'text/csv');
   }
 }
 

@@ -46,13 +46,13 @@ export class RawLogRecorder {
   }
 
   toNdjson(): string {
-    return [HEADER, ...this.entries.map(e => JSON.stringify(e))].join('\n') + '\n';
+    return [HEADER, ...this.entries.map((e) => JSON.stringify(e))].join('\n') + '\n';
   }
 }
 
 /** Parses a log file. All-or-nothing: returns an error naming the first bad line instead of a partial log. */
 export const parseNdjson = (text: string): { entries: LogEntry[] } | { error: string } => {
-  const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+  const lines = text.split(/\r?\n/).filter((line) => line.trim() !== '');
   if (lines.length === 0) {
     return { error: 'The file is empty' };
   }
@@ -74,8 +74,11 @@ export const parseNdjson = (text: string): { entries: LogEntry[] } | { error: st
     const entry = value as Partial<LogEntry> | null;
     const previous = entries[entries.length - 1]?.t ?? 0;
     if (
-      typeof entry?.t !== 'number' || !Number.isFinite(entry.t) || entry.t < previous ||
-      typeof entry.frame !== 'string' || entry.frame === ''
+      typeof entry?.t !== 'number' ||
+      !Number.isFinite(entry.t) ||
+      entry.t < previous ||
+      typeof entry.frame !== 'string' ||
+      entry.frame === ''
     ) {
       return { error: `Line ${i + 1} is not a valid entry (needs increasing "t" and a "frame")` };
     }
@@ -94,7 +97,12 @@ export class LogReplayer {
     return this.running;
   }
 
-  start(entries: readonly LogEntry[], emit: (frame: string) => void, speed: number, onDone: () => void = () => {}): void {
+  start(
+    entries: readonly LogEntry[],
+    emit: (frame: string) => void,
+    speed: number,
+    onDone: () => void = () => {},
+  ): void {
     this.stop();
     this.index = 0;
     this.running = true;

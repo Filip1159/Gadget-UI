@@ -1,8 +1,17 @@
 import { Injectable, signal } from '@angular/core';
 import { Subject, defer, filter, finalize, map, share } from 'rxjs';
-import { DEFAULT_ROBOT_URL } from './config';
+import { DEFAULT_ROBOT_URL } from '../config';
 import { SweepPairer, PosedSweep } from './sweep-pairing';
-import { Command, Pose, RobotMessage, RobotState, Sweep, SweepPose, encodeCommand, parseMessage } from './protocol';
+import {
+  Command,
+  Pose,
+  RobotMessage,
+  RobotState,
+  Sweep,
+  SweepPose,
+  encodeCommand,
+  parseMessage,
+} from '../protocol';
 
 export type SocketStatus = 'connecting' | 'open' | 'closed';
 
@@ -14,7 +23,6 @@ const ERROR_VISIBLE_MS = 4000;
 
 @Injectable({ providedIn: 'root' })
 export class SocketService {
-
   private socket?: WebSocket;
   private reconnectTimer?: ReturnType<typeof setTimeout>;
   private reconnectDelayMs = MIN_RECONNECT_MS;
@@ -24,7 +32,7 @@ export class SocketService {
 
   /** Parsed, validated frames from the robot; unrecognised frames are dropped. */
   public robot$ = this.messages$.pipe(
-    map(msg => {
+    map((msg) => {
       const parsed = parseMessage(msg);
       if (!parsed) {
         console.error('Unrecognised or malformed message, ignoring:', msg);
@@ -38,7 +46,7 @@ export class SocketService {
   /** One complete sweep per frame. */
   public sweeps$ = this.robot$.pipe(
     filter((m): m is Extract<RobotMessage, { type: 'measure' }> => m.type === 'measure'),
-    map(m => m.sweep as Sweep),
+    map((m) => m.sweep as Sweep),
   );
 
   /**
@@ -49,7 +57,7 @@ export class SocketService {
     const pairer = new SweepPairer(); // per subscriber, so subscribers never share pairing state
     const reconnect = this.opened$.subscribe(() => pairer.reset());
     return this.robot$.pipe(
-      map(message => pairer.push(message)),
+      map((message) => pairer.push(message)),
       filter((posed): posed is PosedSweep => posed !== undefined),
       finalize(() => reconnect.unsubscribe()),
     );
@@ -58,7 +66,7 @@ export class SocketService {
   /** Robot state, sent by the firmware right after (authenticated) connect. */
   public state$ = this.robot$.pipe(
     filter((m): m is Extract<RobotMessage, { type: 'state' }> => m.type === 'state'),
-    map(m => m.state as RobotState),
+    map((m) => m.state as RobotState),
   );
 
   /** Frames of a sensor characterisation run (`CAL`): one per sweep, then `calibrationDone`. */
@@ -72,19 +80,19 @@ export class SocketService {
   /** Odometry pose, broadcast by the firmware every 200 ms (and once on connect). */
   public pose$ = this.robot$.pipe(
     filter((m): m is Extract<RobotMessage, { type: 'pose' }> => m.type === 'pose'),
-    map(m => m.pose as Pose),
+    map((m) => m.pose as Pose),
   );
 
   /** Pose at the start and end of a sweep, emitted just before that sweep's `sweeps$` value. */
   public sweepPose$ = this.robot$.pipe(
     filter((m): m is Extract<RobotMessage, { type: 'sweepPose' }> => m.type === 'sweepPose'),
-    map(m => m.sweepPose as SweepPose),
+    map((m) => m.sweepPose as SweepPose),
   );
 
   /** Rejection reasons ("ERR <reason>") for commands the robot did not accept. */
   public errors$ = this.robot$.pipe(
     filter((m): m is Extract<RobotMessage, { type: 'error' }> => m.type === 'error'),
-    map(m => m.reason),
+    map((m) => m.reason),
   );
 
   public status = signal<SocketStatus>('closed');
@@ -96,7 +104,7 @@ export class SocketService {
   public opened$ = new Subject<void>();
 
   constructor() {
-    this.errors$.subscribe(reason => {
+    this.errors$.subscribe((reason) => {
       this.lastError.set(reason);
       clearTimeout(this.errorTimer);
       this.errorTimer = setTimeout(() => this.lastError.set(null), ERROR_VISIBLE_MS);

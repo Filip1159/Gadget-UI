@@ -34,7 +34,9 @@ describe('RawLogRecorder', () => {
     rec.add('POSE X=0 Y=0 TH=0 T=1 Q=0', 1000);
     rec.clear();
     rec.add('POSE X=0 Y=0 TH=0 T=1 Q=0', 9000);
-    expect(parseNdjson(rec.toNdjson())).toEqual({ entries: [{ t: 0, frame: 'POSE X=0 Y=0 TH=0 T=1 Q=0' }] });
+    expect(parseNdjson(rec.toNdjson())).toEqual({
+      entries: [{ t: 0, frame: 'POSE X=0 Y=0 TH=0 T=1 Q=0' }],
+    });
   });
 });
 
@@ -67,7 +69,9 @@ describe('parseNdjson', () => {
   });
 
   it('accepts CRLF line endings', () => {
-    expect(parseNdjson('{"gadgetLog":1}\r\n{"t":0,"frame":"POSE X"}\r\n')).toEqual({ entries: [{ t: 0, frame: 'POSE X' }] });
+    expect(parseNdjson('{"gadgetLog":1}\r\n{"t":0,"frame":"POSE X"}\r\n')).toEqual({
+      entries: [{ t: 0, frame: 'POSE X' }],
+    });
   });
 });
 
@@ -84,7 +88,7 @@ describe('LogReplayer', () => {
   it('replays with the original timing', () => {
     const out: string[] = [];
     const done = vi.fn();
-    new LogReplayer().start(entries, f => out.push(f), 1, done);
+    new LogReplayer().start(entries, (f) => out.push(f), 1, done);
     expect(out).toEqual(['a']);
     vi.advanceTimersByTime(99);
     expect(out).toEqual(['a']);
@@ -97,7 +101,7 @@ describe('LogReplayer', () => {
 
   it('plays faster with a higher speed', () => {
     const out: string[] = [];
-    new LogReplayer().start(entries, f => out.push(f), 4);
+    new LogReplayer().start(entries, (f) => out.push(f), 4);
     vi.advanceTimersByTime(75);
     expect(out).toEqual(['a', 'b', 'c']);
   });
@@ -105,7 +109,7 @@ describe('LogReplayer', () => {
   it('plays everything at once, in order, at speed 0', () => {
     const out: string[] = [];
     const replayer = new LogReplayer();
-    replayer.start(entries, f => out.push(f), 0);
+    replayer.start(entries, (f) => out.push(f), 0);
     vi.advanceTimersByTime(0);
     expect(out).toEqual(['a', 'b', 'c']);
     expect(replayer.playing).toBe(false);
@@ -114,11 +118,11 @@ describe('LogReplayer', () => {
   it('stops on request and a restart begins from the top', () => {
     const out: string[] = [];
     const replayer = new LogReplayer();
-    replayer.start(entries, f => out.push(f), 1);
+    replayer.start(entries, (f) => out.push(f), 1);
     replayer.stop();
     vi.advanceTimersByTime(1000);
     expect(out).toEqual(['a']);
-    replayer.start(entries, f => out.push(f), 1);
+    replayer.start(entries, (f) => out.push(f), 1);
     expect(out).toEqual(['a', 'a']);
   });
 });

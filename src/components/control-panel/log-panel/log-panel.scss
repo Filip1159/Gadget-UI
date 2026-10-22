@@ -1,30 +1,25 @@
 .log-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-width: 280px;
-  background-color: #eee;
-  padding: 12px;
-  border-radius: 4px;
-
-  &__title {
-    margin: 0;
-    font-size: 18px;
-  }
-
-  &__row {
+  &__body {
     display: flex;
-    align-items: center;
-    gap: 10px;
+    flex-direction: column;
+    gap: 12px;
   }
 
-  &__status,
-  &__error {
-    margin: 0;
+  &__live {
     font-size: 13px;
+    font-weight: 500;
+    color: var(--danger);
+  }
+
+  &__file {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-weight: 500;
   }
 
   &__error {
-    color: #b91c1c;
+    font-size: 13px;
+    color: var(--danger);
   }
 }

@@ -1,8 +1,8 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Subject } from 'rxjs';
-import { Command, Pose, SweepPose } from '../../../protocol';
-import { SocketService } from '../../../socket.service';
+import { Command, Pose, SweepPose } from '../../../core/protocol';
+import { SocketService } from '../../../core/socket/socket.service';
 import { PoseDisplay } from './pose-display';
 
 describe('PoseDisplay', () => {
@@ -16,13 +16,25 @@ describe('PoseDisplay', () => {
     sent.length = 0;
     status.set('open');
     TestBed.configureTestingModule({
-      providers: [{ provide: SocketService, useValue: { status, pose$, sweepPose$, send: (c: Command) => (sent.push(c), true) } }],
+      providers: [
+        {
+          provide: SocketService,
+          useValue: { status, pose$, sweepPose$, send: (c: Command) => (sent.push(c), true) },
+        },
+      ],
     });
     component = TestBed.runInInjectionContext(() => new PoseDisplay());
   });
 
   it('shows the latest pose and converts the heading to degrees', () => {
-    pose$.next({ xMm: 100, yMm: -5, theta: Math.PI / 2, tMs: 1, questionable: false, relocated: false });
+    pose$.next({
+      xMm: 100,
+      yMm: -5,
+      theta: Math.PI / 2,
+      tMs: 1,
+      questionable: false,
+      relocated: false,
+    });
     expect(component.pose()?.xMm).toBe(100);
     expect(component.headingDegrees()).toBeCloseTo(90);
   });

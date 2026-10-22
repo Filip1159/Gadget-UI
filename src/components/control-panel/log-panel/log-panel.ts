@@ -1,7 +1,8 @@
 import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { LogEntry, LogReplayer, parseNdjson, RawLogRecorder } from '../../../raw-log';
-import { SocketService } from '../../../socket.service';
+import { downloadFile, timestampedName } from '../../../core/download';
+import { LogEntry, LogReplayer, parseNdjson, RawLogRecorder } from '../../../core/log/raw-log';
+import { SocketService } from '../../../core/socket/socket.service';
 
 /** Replay speeds: 0 means as fast as possible. */
 export const REPLAY_SPEEDS = [1, 4, 0] as const;
@@ -33,7 +34,7 @@ export class LogPanel {
   readonly canPlay = computed(() => this.loadedFrames() > 0 && !this.recording());
 
   constructor() {
-    this.socket.messages$.pipe(takeUntilDestroyed()).subscribe(frame => {
+    this.socket.messages$.pipe(takeUntilDestroyed()).subscribe((frame) => {
       // Frames the panel itself replays are not recorded again.
       if (this.recording() && !this.replaying() && this.recorder.add(frame, Date.now())) {
         this.recordedFrames.set(this.recorder.size);
@@ -53,16 +54,15 @@ export class LogPanel {
       this.full.set(false);
       this.message.set(null);
     }
-    this.recording.update(on => !on);
+    this.recording.update((on) => !on);
   }
 
   download(): void {
-    const url = URL.createObjectURL(new Blob([this.recorder.toNdjson()], { type: 'application/x-ndjson' }));
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `gadget-log-${new Date().toISOString().replace(/[:.]/g, '-')}.ndjson`;
-    link.click();
-    URL.revokeObjectURL(url);
+    downloadFile(
+      timestampedName('gadget-log', 'ndjson'),
+      this.recorder.toNdjson(),
+      'application/x-ndjson',
+    );
   }
 
   async load(event: Event): Promise<void> {
@@ -91,7 +91,12 @@ export class LogPanel {
 
   play(): void {
     this.replaying.set(true);
-    this.replayer.start(this.loaded, frame => this.socket.messages$.next(frame), this.speed(), () => this.replaying.set(false));
+    this.replayer.start(
+      this.loaded,
+      (frame) => this.socket.messages$.next(frame),
+      this.speed(),
+      () => this.replaying.set(false),
+    );
     // Speed 0 finishes inside start(); reflect that.
     this.replaying.set(this.replayer.playing);
   }

@@ -3,7 +3,15 @@ import { CalibrationRecorder } from './calibration-recorder';
 describe('CalibrationRecorder', () => {
   it('writes a header and one row per sweep, with OOR and missing sensors as empty cells', () => {
     const recorder = new CalibrationRecorder();
-    recorder.add({ target: 'FRONT', distanceMm: 300, sample: 1, sweep: new Map([['FRONT', 298], ['BACK', null]]) });
+    recorder.add({
+      target: 'FRONT',
+      distanceMm: 300,
+      sample: 1,
+      sweep: new Map([
+        ['FRONT', 298],
+        ['BACK', null],
+      ]),
+    });
     recorder.add({ target: 'ALL', distanceMm: 600, sample: 2, sweep: new Map([['FRONT', 0]]) });
 
     const [header, first, second, rest] = recorder.toCsv().split('\n');
