@@ -10,6 +10,14 @@ Browser control panel for [Gadget](https://github.com/Filip1159/Gadget-firmware)
 - Connection status, automatic reconnect and optional token auth
 - Angular 21 (zoneless, standalone components, signals), talking to the robot over a plain-text WebSocket (`ws://<robot>:88`)
 
+## Screenshots
+
+![The Drive tab with a live robot connected: odometry map, sensor view, steering controls and pose](docs/screenshots/app.png)
+
+| Live sensors | Sensor calibration |
+| --- | --- |
+| ![Distance sensors drawn to scale around the robot](docs/screenshots/sensors.png) | ![Sensor calibration recording a run](docs/screenshots/calibration.png) |
+
 #
 
 ```bash
