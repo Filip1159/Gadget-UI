@@ -4,6 +4,7 @@ import { DEFAULT_ROBOT_URL } from '../config';
 import { SweepPairer, PosedSweep } from './sweep-pairing';
 import {
   Command,
+  ImuOrientation,
   Pose,
   RobotMessage,
   RobotState,
@@ -87,6 +88,12 @@ export class SocketService {
   public sweepPose$ = this.robot$.pipe(
     filter((m): m is Extract<RobotMessage, { type: 'sweepPose' }> => m.type === 'sweepPose'),
     map((m) => m.sweepPose as SweepPose),
+  );
+
+  /** End of an IMU board orientation check (`IMU_CHECK`): the verdict and the detected axes. */
+  public imuOrient$ = this.robot$.pipe(
+    filter((m): m is Extract<RobotMessage, { type: 'imuOrient' }> => m.type === 'imuOrient'),
+    map((m) => m.result as ImuOrientation),
   );
 
   /** Rejection reasons ("ERR <reason>") for commands the robot did not accept. */

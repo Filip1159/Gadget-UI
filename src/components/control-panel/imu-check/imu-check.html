@@ -1,0 +1,40 @@
+<section class="imu-check">
+  <h2>IMU orientation</h2>
+  <p class="muted">
+    Finds out how the IMU board is mounted. The robot stands still for a second, then
+    <strong>spins left in place</strong> for about two. Put it on the floor with room to turn.
+  </p>
+
+  <div class="actions">
+    @if (running()) {
+      <button type="button" class="danger" (click)="stop()">Stop</button>
+    } @else {
+      <button type="button" class="primary" [disabled]="!canStart()" (click)="start()">
+        Run check
+      </button>
+    }
+  </div>
+
+  @if (running()) {
+    <p class="muted" role="status">Checking&hellip; keep the robot still, then it turns.</p>
+  } @else if (result(); as result) {
+    <p role="status" [class.imu-check__bad]="result.verdict !== 'ok'">{{ verdictText() }}</p>
+    @if (result.verdict === 'ok') {
+      <dl class="imu-check__values">
+        <dt>up axis</dt>
+        <dd>{{ result.up }}</dd>
+        <dt>yaw axis</dt>
+        <dd>{{ result.yaw }}</dd>
+        <dt>tilt</dt>
+        <dd>{{ result.tiltDeg }}&deg;</dd>
+        <dt>spin rate</dt>
+        <dd>{{ result.rateDps }}&deg;/s</dd>
+      </dl>
+      <p class="muted">
+        The yaw axis is the sensor axis whose rate is the robot's counter-clockwise turn.
+      </p>
+    } @else if (result.up || result.yaw) {
+      <p class="muted">Up {{ result.up ?? '?' }}, yaw {{ result.yaw ?? '?' }}</p>
+    }
+  }
+</section>

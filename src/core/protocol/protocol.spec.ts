@@ -166,6 +166,61 @@ describe('parseMessage CAL / CAL_DONE', () => {
   });
 });
 
+describe('parseMessage IMU_ORIENT', () => {
+  it('parses a successful check', () => {
+    expect(parseMessage('IMU_ORIENT RESULT=ok UP=+Z YAW=+Z TILT=2 RATE=85')).toEqual({
+      type: 'imuOrient',
+      result: { verdict: 'ok', up: '+Z', yaw: '+Z', tiltDeg: 2, rateDps: 85 },
+    });
+    expect(parseMessage('IMU_ORIENT RESULT=ok UP=-Z YAW=-Z TILT=0 RATE=120')).toMatchObject({
+      result: { up: '-Z', yaw: '-Z' },
+    });
+  });
+
+  it('maps unknown axes (?) to null', () => {
+    expect(parseMessage('IMU_ORIENT RESULT=no_data UP=? YAW=? TILT=0 RATE=0')).toEqual({
+      type: 'imuOrient',
+      result: { verdict: 'no_data', up: null, yaw: null, tiltDeg: 0, rateDps: 0 },
+    });
+    expect(
+      parseMessage('IMU_ORIENT RESULT=inconsistent UP=+Z YAW=-Z TILT=1 RATE=90'),
+    ).toMatchObject({ result: { verdict: 'inconsistent', up: '+Z', yaw: '-Z' } });
+  });
+
+  it('accepts every verdict the firmware can send', () => {
+    for (const verdict of [
+      'ok',
+      'no_data',
+      'moving',
+      'no_gravity',
+      'tilted',
+      'no_spin',
+      'inconsistent',
+      'aborted',
+    ]) {
+      const frame = `IMU_ORIENT RESULT=${verdict} UP=? YAW=? TILT=0 RATE=0`;
+      expect(parseMessage(frame), frame).toMatchObject({ result: { verdict } });
+    }
+  });
+
+  it('rejects malformed frames', () => {
+    for (const bad of [
+      'IMU_ORIENT',
+      'IMU_ORIENT RESULT=ok UP=+Z YAW=+Z TILT=2',
+      'IMU_ORIENT RESULT=ok UP=+Z YAW=+Z TILT=2 RATE=85 X=1',
+      'IMU_ORIENT RESULT=fine UP=+Z YAW=+Z TILT=2 RATE=85',
+      'IMU_ORIENT RESULT=ok UP=Z YAW=+Z TILT=2 RATE=85',
+      'IMU_ORIENT RESULT=ok UP=+W YAW=+Z TILT=2 RATE=85',
+      'IMU_ORIENT RESULT=ok UP=+Z YAW=+Z TILT=x RATE=85',
+      'IMU_ORIENT RESULT=ok UP=+Z YAW=+Z TILT=-2 RATE=85',
+      'IMU_ORIENT RESULT=ok UP=+Z YAW=+Z TILT=2 RATE=',
+      'IMU_ORIENT RESULT=ok RESULT=ok UP=+Z YAW=+Z TILT=2',
+    ]) {
+      expect(parseMessage(bad), bad).toBeUndefined();
+    }
+  });
+});
+
 describe('encodeCommand', () => {
   it('encodes every command type', () => {
     expect(encodeCommand({ type: 'drive', direction: 'FORWARD_LEFT' })).toBe('FORWARD_LEFT');
@@ -176,6 +231,8 @@ describe('encodeCommand', () => {
     expect(encodeCommand({ type: 'calibrate', distanceMm: 300, count: 100 })).toBe('CAL 300 100');
     expect(encodeCommand({ type: 'calibrateStop' })).toBe('CAL_STOP');
     expect(encodeCommand({ type: 'poseReset' })).toBe('POSE_RESET');
+    expect(encodeCommand({ type: 'imuCheck' })).toBe('IMU_CHECK');
+    expect(encodeCommand({ type: 'imuCheckStop' })).toBe('IMU_CHECK_STOP');
     expect(encodeCommand({ type: 'auth', token: 'abc' })).toBe('AUTH abc');
   });
 });

@@ -2,6 +2,7 @@ import { Component, signal } from '@angular/core';
 import { Steering } from './steering/steering';
 import { RobotPreview } from './robot-preview/robot-preview';
 import { SensorCalibration } from './sensor-calibration/sensor-calibration';
+import { ImuCheck } from './imu-check/imu-check';
 import { PoseDisplay } from './pose-display/pose-display';
 import { MapPanel } from './map-panel/map-panel';
 import { LogPanel } from './log-panel/log-panel';
@@ -10,7 +11,7 @@ type TabId = 'drive' | 'calibration';
 
 @Component({
   selector: 'control-panel',
-  imports: [Steering, RobotPreview, SensorCalibration, PoseDisplay, MapPanel, LogPanel],
+  imports: [Steering, RobotPreview, SensorCalibration, ImuCheck, PoseDisplay, MapPanel, LogPanel],
   templateUrl: './control-panel.html',
   styleUrl: './control-panel.scss',
 })

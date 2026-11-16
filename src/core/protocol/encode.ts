@@ -18,6 +18,10 @@ export const encodeCommand = (command: Command): string => {
       return 'CAL_STOP';
     case 'poseReset':
       return 'POSE_RESET';
+    case 'imuCheck':
+      return 'IMU_CHECK';
+    case 'imuCheckStop':
+      return 'IMU_CHECK_STOP';
     case 'auth':
       return `AUTH ${command.token}`;
   }

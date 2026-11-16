@@ -1,0 +1,28 @@
+.imu-check {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 460px;
+
+  &__bad {
+    color: var(--warning);
+  }
+
+  &__values {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 2px 16px;
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+
+    dt {
+      color: var(--text-muted);
+    }
+
+    dd {
+      margin: 0;
+      font-weight: 600;
+      text-align: right;
+    }
+  }
+}

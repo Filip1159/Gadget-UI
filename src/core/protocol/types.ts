@@ -39,6 +39,8 @@ export type Command =
   | { type: 'calibrate'; distanceMm: number; count: number }
   | { type: 'calibrateStop' }
   | { type: 'poseReset' }
+  | { type: 'imuCheck' }
+  | { type: 'imuCheckStop' }
   | { type: 'auth'; token: string };
 
 /** Pose at one instant: millimetres, radians counter-clockwise, robot millis(). */
@@ -71,6 +73,39 @@ export type Pose = {
 /** Robot state, sent right after (authenticated) connect: "STATE SPEED=1000 P=0.1500 I=0.0500 D=0.0000 MEASURING=0" */
 export type RobotState = { speed: number; p: number; i: number; d: number; measuring: boolean };
 
+/** How the IMU check ended (wire: lower-case `RESULT=`). Only `ok` means the axes below can be trusted. */
+export const IMU_VERDICTS = [
+  'ok',
+  'no_data',
+  'moving',
+  'no_gravity',
+  'tilted',
+  'no_spin',
+  'inconsistent',
+  'aborted',
+] as const;
+export type ImuVerdict = (typeof IMU_VERDICTS)[number];
+
+/** A sensor axis of the IMU board with a direction, e.g. '+Z' (up when the board lies flat) or '-Z' (upside down). */
+export type ImuAxis = `${'+' | '-'}${'X' | 'Y' | 'Z'}`;
+
+/**
+ * Result of the IMU board orientation check (`IMU_CHECK`): the robot stands still, then spins left in place.
+ * "IMU_ORIENT RESULT=ok UP=+Z YAW=+Z TILT=2 RATE=85" (axes are `?` on the wire when unknown, null here).
+ * `yaw` is the sensor axis whose rate is the robot's counter-clockwise yaw rate.
+ */
+export type ImuOrientation = {
+  verdict: ImuVerdict;
+  /** From gravity. */
+  up: ImuAxis | null;
+  /** From the spin. */
+  yaw: ImuAxis | null;
+  /** Degrees between gravity and the up axis. */
+  tiltDeg: number;
+  /** Mean spin rate on the yaw axis, degrees per second. */
+  rateDps: number;
+};
+
 export type RobotMessage =
   | { type: 'measure'; sweep: Sweep }
   | { type: 'state'; state: RobotState }
@@ -78,4 +113,5 @@ export type RobotMessage =
   | { type: 'calibration'; distanceMm: number; index: number; total: number; sweep: Sweep }
   | { type: 'calibrationDone'; distanceMm: number; done: number }
   | { type: 'pose'; pose: Pose }
-  | { type: 'sweepPose'; sweepPose: SweepPose };
+  | { type: 'sweepPose'; sweepPose: SweepPose }
+  | { type: 'imuOrient'; result: ImuOrientation };

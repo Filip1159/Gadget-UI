@@ -1,5 +1,14 @@
 import { intField, keyValueFields, numberField } from './fields';
-import { PoseSample, RobotMessage, SENSOR_DIRECTIONS, SensorDirection, Sweep } from './types';
+import {
+  IMU_VERDICTS,
+  ImuAxis,
+  ImuVerdict,
+  PoseSample,
+  RobotMessage,
+  SENSOR_DIRECTIONS,
+  SensorDirection,
+  Sweep,
+} from './types';
 
 const isSensorDirection = (value: string): value is SensorDirection =>
   (SENSOR_DIRECTIONS as readonly string[]).includes(value);
@@ -13,6 +22,7 @@ const isSensorDirection = (value: string): value is SensorDirection =>
  * - "POSE X=120 Y=-4 TH=-31 T=123456 Q=0"
  * - "SWEEP_POSE T0=.. X0=.. Y0=.. TH0=.. T1=.. X1=.. Y1=.. TH1=.." (sent right before the MEASURE frame it belongs to)
  * - "CAL <distance_mm> <i>/<n> FRONT=412 ..." (one sweep of a sensor characterisation run) and "CAL_DONE <distance_mm> <done>"
+ * - "IMU_ORIENT RESULT=ok UP=+Z YAW=+Z TILT=2 RATE=85" (end of an IMU board orientation check; axes are `?` if unknown)
  *
  * To add a frame: write a `parseXxx(tokens)` on top of `fields.ts`, add its case here, and add specs
  * for a valid and a malformed frame to protocol.spec.ts.
@@ -33,6 +43,8 @@ export const parseMessage = (msg: string): RobotMessage | undefined => {
       return parsePose(tokens);
     case 'SWEEP_POSE':
       return parseSweepPose(tokens);
+    case 'IMU_ORIENT':
+      return parseImuOrient(tokens);
     case 'ERR':
       return { type: 'error', reason: trimmed.slice(3).trim() || 'unknown' };
     default:
@@ -139,6 +151,38 @@ const parseCalibrationDone = (tokens: string[]): RobotMessage | undefined => {
     return undefined;
   }
   return { type: 'calibrationDone', distanceMm: parseInt(distance, 10), done: parseInt(done, 10) };
+};
+
+const isImuVerdict = (value: string | undefined): value is ImuVerdict =>
+  (IMU_VERDICTS as readonly string[]).includes(value ?? '');
+
+/** '+Z' -> '+Z', '?' -> null, anything else -> undefined (malformed). */
+const imuAxis = (value: string | undefined): ImuAxis | null | undefined =>
+  value === '?' ? null : /^[+-][XYZ]$/.test(value ?? '') ? (value as ImuAxis) : undefined;
+
+const parseImuOrient = (tokens: string[]): RobotMessage | undefined => {
+  const fields = keyValueFields(tokens);
+  if (!fields || fields.size !== 5) {
+    return undefined;
+  }
+  const verdict = fields.get('RESULT');
+  const up = imuAxis(fields.get('UP'));
+  const yaw = imuAxis(fields.get('YAW'));
+  const tilt = intField(fields, 'TILT');
+  const rate = intField(fields, 'RATE');
+  if (
+    !isImuVerdict(verdict) ||
+    up === undefined ||
+    yaw === undefined ||
+    tilt === undefined ||
+    rate === undefined
+  ) {
+    return undefined;
+  }
+  return {
+    type: 'imuOrient',
+    result: { verdict, up, yaw, tiltDeg: tilt, rateDps: rate },
+  };
 };
 
 const parseState = (tokens: string[]): RobotMessage | undefined => {

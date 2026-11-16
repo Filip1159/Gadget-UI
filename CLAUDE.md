@@ -40,6 +40,7 @@ src/
       slider/                      numeric slider with a `model()` value (two-way bindable)
       pose-display/                  live odometry pose + reset button
       sensor-calibration/            sensor characterisation panel + CSV recorder (firmware MAPPING.MD item 0.4)
+      imu-check/                     IMU board orientation check (firmware MAPPING.MD 6.1): Run/Stop button, verdict text, detected up/yaw axes
       robot-preview/               canvas visualization: robot-geometry.ts (robot in mm), sensor-renderer.ts (drawing), robot-preview.ts (container)
       map-panel/                   top-down map in the odometry frame: map-view.ts (world<->canvas, pan, zoom), map-gestures.ts (drag-to-pan and wheel-zoom logic, framework-free), map-trail.ts (bounded path), point-projection.ts (sweep + pose -> world points), point-cloud.ts (bounded, age-stamped), map-grid.ts (grid spacing and lines), map-renderer.ts, map-panel.ts (container)
       log-panel/                   record POSE/SWEEP_POSE/MEASURE frames to NDJSON and replay a file into SocketService.messages$ (core/log/raw-log.ts holds the format, recorder, parser, replayer)
@@ -64,6 +65,7 @@ See the firmware repo's `CLAUDE.md` for the authoritative wire format; mirrored 
 - `PID <P> <I> <D>` - from the PID form; only sent for finite numbers >= 0 (the button is disabled otherwise).
 - `POSE_RESET` - from the "Reset pose" button of `pose-display/`: zeroes the robot's odometry pose.
 - `CAL <distance_mm> <count>` / `CAL_STOP` - from the "Sensor calibration" panel (`sensor-calibration/`): the robot ranges `count` sweeps while standing still; the panel records them (`calibration-recorder.ts`) and downloads a CSV for the firmware repo's `tools/analyze_sensors.py`.
+- `IMU_CHECK` / `IMU_CHECK_STOP` - from the "IMU orientation" panel (`imu-check/`, Calibration tab): the robot stands still ~1 s, spins LEFT in place ~2 s and answers `IMU_ORIENT`. Stop sends `IMU_CHECK_STOP`; the firmware also aborts on any drive command, so Esc/Space (STOP) stops the spin too.
 - `MEASURE_START` / `MEASURE_STOP` - from the "Start/Stop Measuring" button.
 
 **Incoming (robot -> this app)**:
@@ -71,6 +73,7 @@ See the firmware repo's `CLAUDE.md` for the authoritative wire format; mirrored 
 - `POSE X=<mm> Y=<mm> TH=<mrad> T=<ms> Q=<0|1> [RELOC=1]` - odometry pose every 200 ms and after connect (exposed as `pose$`, shown by `pose-display/`; all-or-nothing integer parse).
 - `SWEEP_POSE T0=.. X0=.. Y0=.. TH0=.. T1=.. X1=.. Y1=.. TH1=..` - pose at the start and end of a sweep, sent right before its `MEASURE` frame (exposed as `sweepPose$`; pairing with `sweeps$` is item 2.1; `pose-display/` shows how far the robot moved during the last sweep).
 - `CAL <distance_mm> <i>/<n> <DIRECTION>=<mm|OOR> ...` / `CAL_DONE <distance_mm> <done>` - sweeps of a calibration run (exposed as `calibration$`; the preview also draws them live).
+- `IMU_ORIENT RESULT=<verdict> UP=<axis> YAW=<axis> TILT=<deg> RATE=<deg/s>` - end of an IMU check (exposed as `imuOrient$`; verdicts `ok`, `no_data`, `moving`, `no_gravity`, `tilted`, `no_spin`, `inconsistent`, `aborted`; axes like `+Z`, `?` = unknown -> null). The panel gives up waiting after 8 s if no answer comes.
 - `STATE SPEED=<n> P=<f> I=<f> D=<f> MEASURING=<0|1>` - sent right after connect; initialises the slider, PID fields and the measuring button, so UI and robot cannot disagree after a reload/reconnect.
 - `ERR <reason>` - a command was rejected; shown in an orange banner.
 
